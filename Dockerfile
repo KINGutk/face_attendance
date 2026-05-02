@@ -1,13 +1,12 @@
 FROM python:3.11-slim
 
-# Install system dependencies for dlib/face_recognition and OpenCV
+# Install system dependencies for dlib/face_recognition
 RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake \
     build-essential \
     libopenblas-dev \
     liblapack-dev \
     libx11-dev \
-    libgl1-mesa-glx \
     libglib2.0-0 \
     git \
     && rm -rf /var/lib/apt/lists/*
