@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#00ff88">
+    <meta charset="UTF-8">
+    <title>🔔 Admin Request Center</title>
+    <style>
+        /* --- Global Neon Theme --- */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: radial-gradient(circle at top left, #0f0f0f, #1c1c1c, #000);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #00ff88;
+            font-size: 2.5em;
+            text-shadow: 0 0 20px #00ff88;
+            margin-bottom: 40px;
+            margin-top: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.1);
+        }
+
+        .section h3 {
+            color: #00ff88;
+            border-bottom: 2px solid #00ff88;
+            padding-bottom: 15px;
+            margin-top: 0;
+            text-shadow: 0 0 10px #00ff88;
+            font-size: 1.5em;
+        }
+        
+        /* --- Table Styles --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        
+        th {
+            background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+        
+        tr:hover { background: rgba(255, 255, 255, 0.05); }
+
+        /* --- Action Buttons --- */
+        .btn {
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-right: 5px;
+        }
+        
+        .btn-approve { background: #00ff88; color: #000; }
+        .btn-approve:hover { background: #00cc6a; transform: scale(1.05); }
+        
+        .btn-reject { background: #ff4444; color: #fff; }
+        .btn-reject:hover { background: #cc0000; transform: scale(1.05); }
+
+        /* Status Badges */
+        .status { padding: 5px 10px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+        .status-pending { background: rgba(255, 170, 0, 0.2); color: #ffaa00; border: 1px solid #ffaa00; }
+
+        .empty-msg { text-align: center; color: #666; padding: 20px; font-style: italic; }
+
+        /* --- Dashboard Button --- */
+        .center-btn { 
+            margin-top: 40px; 
+            margin-bottom: 30px; 
+            text-align: center;
+        }
+        
+        .btn-dash {
+            display: inline-block;
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+            padding: 12px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .btn-dash:hover { 
+            background: #00ff88; 
+            color: #000; 
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4); 
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🔔 Admin Request Center</h1>
+
+    <div class="container">
+        <div class="section">
+            <h3>👨‍🏫 Pending Faculty Approvals</h3>
+            {% if pending_professors %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in pending_professors %}
+                    <tr>
+                        <td>{{ p.name }}</td>
+                        <td>{{ p.email }}</td>
+                        <td><span class="status status-pending">Pending</span></td>
+                        <td>
+                            <form method="POST" style="display:inline;">
+                                <input type="hidden" name="type" value="professor">
+                                <input type="hidden" name="professor_id" value="{{ p.id }}">
+                                <button type="submit" name="action" value="approve" class="btn btn-approve">✅ Approve</button>
+                                <button type="submit" name="action" value="reject" class="btn btn-reject">❌ Reject</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-msg">No pending professor requests.</div>
+            {% endif %}
+        </div>
+
+        <div class="section">
+            <h3>🎓 Pending Student Approvals</h3>
+            {% if pending_students %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Roll No</th>
+                        <th>Semester</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in pending_students %}
+                    <tr>
+                        <td>{{ s.name }}</td>
+                        <td>{{ s.roll_no }}</td>
+                        <td>{{ s.semester }}</td>
+                        <td>
+                            <form method="POST" style="display:inline;">
+                                <input type="hidden" name="type" value="student">
+                                <input type="hidden" name="student_id" value="{{ s.id }}">
+                                <button type="submit" name="action" value="approve" class="btn btn-approve">✅ Approve</button>
+                                <button type="submit" name="action" value="reject" class="btn btn-reject">❌ Reject</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-msg">No pending student registrations.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="center-btn">
+        <a href="{{ url_for('index') }}" class="btn-dash">🏠 Back to Dashboard</a>
+    </div>
+
+</body>
+</html>

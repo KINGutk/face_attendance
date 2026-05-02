@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#00ff88">
+  <meta charset="UTF-8">
+  <title>📊 Professor Attendance Register</title>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #0f0f0f, #000);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 { color: #00ff88; text-shadow: 0 0 20px rgba(0, 255, 136, 0.4); margin-bottom: 30px; }
+
+    /* Controls Bar */
+    .controls {
+      display: flex; gap: 15px; justify-content: center; align-items: center;
+      background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px;
+      margin: 0 auto 30px; max-width: 950px; border: 1px solid rgba(0,255,136,0.2);
+      flex-wrap: wrap; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+    select {
+      background: #000; color: #fff; border: 1px solid #444; padding: 12px; border-radius: 8px;
+      font-size: 14px; min-width: 200px; cursor: pointer;
+    }
+    select:focus { border-color: #00ff88; outline: none; }
+
+    /* Grid Table */
+    .table-container { overflow-x: auto; max-width: 1400px; margin: 0 auto; }
+    table {
+      width: 100%; border-collapse: separate; border-spacing: 0; 
+      background: rgba(20,20,20,0.8); border-radius: 12px; overflow: hidden;
+      border: 1px solid #333;
+    }
+    
+    /* Dynamic Headers */
+    th {
+      background: rgba(0, 255, 136, 0.05); color: #00ff88; padding: 15px 10px;
+      text-transform: uppercase; font-size: 0.85em; letter-spacing: 1px;
+      border-bottom: 2px solid #333; min-width: 60px;
+    }
+    th small { display: block; color: #888; font-size: 0.9em; margin-top: 5px; }
+
+    td { padding: 12px 10px; border-bottom: 1px solid #333; vertical-align: middle; }
+    tr:hover { background: rgba(255,255,255,0.02); }
+
+    /* Circles */
+    .day-circle {
+      width: 35px; height: 35px; border-radius: 50%; margin: 0 auto;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 0.8em;
+      background: #1a1a1a; color: #555; border: 1px solid #333;
+      position: relative; cursor: default; transition: 0.3s;
+    }
+    
+    /* Status Colors */
+    .status-Present { background: rgba(0,255,136,0.15); border-color: #00ff88; color: #00ff88; box-shadow: 0 0 8px rgba(0,255,136,0.2); }
+    .status-Absent { background: rgba(255,68,68,0.15); border-color: #ff4444; color: #ff4444; }
+    .status-Leave { background: rgba(255,170,0,0.15); border-color: #ffaa00; color: #ffaa00; }
+
+    /* Tooltip */
+    .day-circle:hover::after {
+      content: attr(data-tooltip);
+      position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+      background: #fff; color: #000; padding: 5px 10px; border-radius: 6px;
+      font-size: 0.75em; white-space: nowrap; pointer-events: none; z-index: 100;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5); font-weight: bold;
+    }
+
+    /* Percentage Badge */
+    .pct-badge {
+      font-weight: bold; padding: 6px 12px; border-radius: 20px; font-size: 0.9em; 
+      display: inline-block; min-width: 40px;
+    }
+    .pct-high { color: #00ff88; background: rgba(0,255,136,0.1); border: 1px solid #00ff88; }
+    .pct-mid { color: #ffaa00; background: rgba(255,170,0,0.1); border: 1px solid #ffaa00; }
+    .pct-low { color: #ff4444; background: rgba(255,68,68,0.1); border: 1px solid #ff4444; }
+
+    /* Dashboard Button Style */
+    .btn-dash {
+      display: inline-block; margin-top: 40px;
+      color: #00ff88; text-decoration: none;
+      border: 1px solid #00ff88; padding: 12px 30px;
+      border-radius: 30px; font-weight: bold;
+      transition: 0.3s;
+    }
+    .btn-dash:hover { background: #00ff88; color: #000; box-shadow: 0 0 15px #00ff88; }
+  </style>
+</head>
+<body>
+
+  <h1>📊 Professor Attendance Register</h1>
+
+  <div class="controls">
+    <select id="semesterSelect" onchange="fetchData()">
+      <option value="1st Semester">1st Semester</option>
+      <option value="2nd Semester">2nd Semester</option>
+      <option value="3rd Semester">3rd Semester</option>
+      <option value="4th Semester">4th Semester</option>
+      <option value="5th Semester">5th Semester</option>
+      <option value="6th Semester">6th Semester</option>
+      <option value="7th Semester">7th Semester</option>
+      <option value="8th Semester">8th Semester</option>
+    </select>
+
+    <select id="subjectSelect" onchange="fetchData()">
+      <option value="all">-- All My Subjects --</option>
+      {% for sub in subjects %}
+      <option value="{{ sub.subject_name }}">{{ sub.subject_name }}</option>
+      {% endfor %}
+    </select>
+
+    <select id="weekSelect" onchange="fetchData()"></select>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr id="headerRow">
+          <th style="text-align:left; padding-left:20px; width:250px;">Student Name</th>
+          <th id="th_0">Mon</th>
+          <th id="th_1">Tue</th>
+          <th id="th_2">Wed</th>
+          <th id="th_3">Thu</th>
+          <th id="th_4">Fri</th>
+          <th id="th_5">Sat</th>
+          <th style="width:100px;">Overall %</th>
+        </tr>
+      </thead>
+      <tbody id="attendanceGrid"></tbody>
+    </table>
+  </div>
+
+  <a href="{{ url_for('professor_dashboard') }}" class="btn-dash">🏠 Back to Dashboard</a>
+
+  <script>
+    // 1. Initialize Week Dropdown
+    function initWeeks() {
+      const select = document.getElementById('weekSelect');
+      select.innerHTML = '';
+      
+      let curr = new Date();
+      const day = curr.getDay();
+      const diff = curr.getDate() - day + (day == 0 ? -6 : 1);
+      curr.setDate(diff);
+
+      for (let i = 0; i < 6; i++) {
+        let start = new Date(curr);
+        start.setDate(start.getDate() - (i * 7));
+        
+        let end = new Date(start);
+        end.setDate(end.getDate() + 6);
+        
+        let startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        let endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        let label = i === 0 ? "Current Week" : `Week ${i} Ago`;
+        
+        let option = document.createElement('option');
+        option.value = start.toISOString().split('T')[0];
+        option.text = `${label} (${startStr} - ${endStr})`;
+        select.appendChild(option);
+      }
+    }
+
+    // 2. Fetch Data
+    async function fetchData() {
+      const sem = document.getElementById('semesterSelect').value;
+      const sub = document.getElementById('subjectSelect').value;
+      const startVal = document.getElementById('weekSelect').value;
+      
+      // Update Table Headers (Mon Oct 23)
+      updateHeaders(startVal);
+
+      const tbody = document.getElementById('attendanceGrid');
+      tbody.innerHTML = '<tr><td colspan="8" style="padding:40px; color:#888;">🔄 Loading records...</td></tr>';
+
+      try {
+        // CALL NEW PROFESSOR API
+        const url = `/get_professor_weekly_attendance?semester=${encodeURIComponent(sem)}&subject=${encodeURIComponent(sub)}&start_date=${startVal}`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        tbody.innerHTML = '';
+        
+        if(data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="padding:40px; color:#666;">No students found in this semester.</td></tr>';
+          return;
+        }
+
+        let baseDate = new Date(startVal);
+
+        data.forEach(student => {
+          let daysHtml = '';
+          const days = ['M','T','W','T','F','S'];
+          
+          for(let i=0; i<6; i++) {
+            let loopDate = new Date(baseDate);
+            loopDate.setDate(loopDate.getDate() + i);
+            let dateStr = loopDate.toISOString().split('T')[0];
+            
+            let record = student.week_data[dateStr];
+            let status = record ? record.status : 'None';
+            let tooltip = record ? `${record.status} - ${record.time}` : 'No Class';
+
+            daysHtml += `<td>
+              <div class="day-circle status-${status}" data-tooltip="${tooltip}">
+                ${days[i]}
+              </div>
+            </td>`;
+          }
+
+          let pct = student.overall_percent;
+          let pctClass = pct >= 75 ? 'pct-high' : (pct >= 50 ? 'pct-mid' : 'pct-low');
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="text-align:left; padding-left:20px;">
+              <div style="font-weight:bold; color:#fff; font-size:1.1em;">${student.name}</div>
+              <div style="font-size:0.85em; color:#888;">${student.roll}</div>
+            </td>
+            ${daysHtml}
+            <td><span class="pct-badge ${pctClass}">${pct}%</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+      } catch(e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="8" style="color:#ff4444;">❌ Error loading data</td></tr>';
+      }
+    }
+
+    // 3. Helper for Headers
+    function updateHeaders(startDateStr) {
+      let current = new Date(startDateStr);
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      for(let i=0; i<6; i++) {
+        let datePretty = current.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        document.getElementById(`th_${i}`).innerHTML = `${days[i]} <small>${datePretty}</small>`;
+        current.setDate(current.getDate() + 1);
+      }
+    }
+
+    // Init
+    initWeeks();
+    fetchData();
+  </script>
+
+</body>
+</html>

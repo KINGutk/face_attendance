@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#00ff88">
+  <meta charset="UTF-8">
+  <title>📝 Manual Attendance</title>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #0f0f0f, #000);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+      margin: 0; padding: 20px;
+    }
+    h1 { color: #00ff88; text-shadow: 0 0 20px rgba(0, 255, 136, 0.4); margin-bottom: 10px; }
+    p { color: #888; margin-bottom: 30px; font-size: 0.9em; }
+
+    /* Controls Bar */
+    .controls {
+      background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px;
+      display: inline-flex; gap: 20px; border: 1px solid rgba(0,255,136,0.2);
+      margin-bottom: 30px; flex-wrap: wrap; justify-content: center;
+      box-shadow: 0 0 25px rgba(0,0,0,0.5);
+    }
+    
+    .input-group { text-align: left; }
+    label { display: block; font-size: 0.8em; color: #00ff88; margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
+    
+    select, input[type="date"] {
+      background: #000; color: #fff; border: 1px solid #444; padding: 12px;
+      border-radius: 8px; font-size: 1em; outline: none; min-width: 200px;
+    }
+    select:focus, input:focus { border-color: #00ff88; box-shadow: 0 0 10px rgba(0,255,136,0.2); }
+
+    button.save-btn {
+      background: #00ff88; color: #000; border: none; padding: 12px 30px;
+      border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1em;
+      transition: 0.3s; align-self: flex-end;
+    }
+    button.save-btn:hover { background: #00cc6a; transform: scale(1.05); box-shadow: 0 0 20px #00ff88; }
+
+    /* Student Grid */
+    .student-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px; max-width: 1000px; margin: 0 auto 40px;
+    }
+
+    .student-card {
+      background: rgba(20, 20, 20, 0.8); border: 1px solid #333;
+      padding: 20px; border-radius: 12px; display: flex;
+      justify-content: space-between; align-items: center;
+      transition: 0.3s; position: relative;
+    }
+    .student-card:hover { border-color: #555; background: rgba(30,30,30,0.9); }
+
+    .student-info { text-align: left; }
+    .s-name { font-weight: bold; font-size: 1.1em; color: #fff; }
+    .s-roll { font-size: 0.85em; color: #888; margin-top: 4px; }
+
+    /* The Three Circles */
+    .status-options { display: flex; gap: 15px; }
+
+    .circle-btn {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 2px solid; display: flex; align-items: center; justify-content: center;
+      font-weight: bold; cursor: pointer; transition: 0.3s;
+      font-size: 0.9em; user-select: none;
+    }
+
+    /* P: Present (Green) */
+    .btn-p { border-color: #00ff88; color: #00ff88; }
+    .btn-p:hover { background: rgba(0,255,136,0.1); }
+    .btn-p.active { background: #00ff88; color: #000; box-shadow: 0 0 15px #00ff88; transform: scale(1.1); }
+
+    /* A: Absent (Red) */
+    .btn-a { border-color: #ff4444; color: #ff4444; }
+    .btn-a:hover { background: rgba(255,68,68,0.1); }
+    .btn-a.active { background: #ff4444; color: #fff; box-shadow: 0 0 15px #ff4444; transform: scale(1.1); }
+
+    /* L: Leave (Yellow) */
+    .btn-l { border-color: #ffaa00; color: #ffaa00; }
+    .btn-l:hover { background: rgba(255,170,0,0.1); }
+    .btn-l.active { background: #ffaa00; color: #000; box-shadow: 0 0 15px #ffaa00; transform: scale(1.1); }
+
+    /* Dashboard Button */
+    .btn-dash {
+      display: inline-block; margin-top: 20px;
+      color: #00ff88; text-decoration: none;
+      border: 1px solid #00ff88; padding: 12px 30px;
+      border-radius: 30px; font-weight: bold;
+      transition: 0.3s;
+    }
+    .btn-dash:hover { background: #00ff88; color: #000; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+    
+    .loading-msg { padding: 40px; color: #666; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <h1>📝 Manual Attendance</h1>
+  <p>Select a class and date to mark attendance.</p>
+
+  <div class="controls">
+    <div class="input-group">
+      <label>Select Class</label>
+      <select id="classSelect" onchange="loadStudents()">
+        <option value="" disabled selected>-- Choose Class --</option>
+        {% for cls in classes %}
+          <option value="{{ cls.id }}">{{ cls.subject_name }} ({{ cls.semester }}) - {{ cls.day_of_week }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="input-group">
+      <label>Date</label>
+      <input type="date" id="dateInput" value="{{ today }}" onchange="loadStudents()">
+    </div>
+
+    <button class="save-btn" onclick="saveAttendance()">💾 Save Records</button>
+  </div>
+
+  <div id="studentContainer" class="student-grid">
+    <div class="loading-msg">Select a class to load students...</div>
+  </div>
+
+  <a href="{{ url_for('professor_dashboard') }}" class="btn-dash">🏠 Back to Dashboard</a>
+
+  <script>
+    // Store attendance state: { studentId: 'Present' | 'Absent' | 'Leave' }
+    let attendanceState = {};
+
+    async function loadStudents() {
+      const classId = document.getElementById('classSelect').value;
+      const date = document.getElementById('dateInput').value;
+      const container = document.getElementById('studentContainer');
+      
+      if(!classId) return;
+
+      container.innerHTML = '<div class="loading-msg">🔄 Loading student list...</div>';
+      attendanceState = {};
+
+      try {
+        const res = await fetch(`/get_class_students/${classId}?date=${date}`);
+        const data = await res.json();
+        
+        container.innerHTML = '';
+
+        if(data.students.length === 0) {
+          container.innerHTML = '<div class="loading-msg">⚠️ No students found in this semester.</div>';
+          return;
+        }
+
+        data.students.forEach(student => {
+          // Check if record exists, otherwise Default to 'Present'
+          const savedStatus = data.existing_attendance[student.id] || 'Present';
+          attendanceState[student.id] = savedStatus;
+
+          const card = document.createElement('div');
+          card.className = 'student-card';
+          card.innerHTML = `
+            <div class="student-info">
+              <div class="s-name">${student.name}</div>
+              <div class="s-roll">${student.roll_no}</div>
+            </div>
+            <div class="status-options">
+              <div class="circle-btn btn-p ${savedStatus === 'Present' ? 'active' : ''}" 
+                   onclick="setStatus(${student.id}, 'Present', this)">P</div>
+                   
+              <div class="circle-btn btn-a ${savedStatus === 'Absent' ? 'active' : ''}" 
+                   onclick="setStatus(${student.id}, 'Absent', this)">A</div>
+                   
+              <div class="circle-btn btn-l ${savedStatus === 'Leave' ? 'active' : ''}" 
+                   onclick="setStatus(${student.id}, 'Leave', this)">L</div>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+
+      } catch(err) {
+        console.error(err);
+        container.innerHTML = '<div class="loading-msg" style="color:#ff4444">❌ Error loading data.</div>';
+      }
+    }
+
+    // Handle Circle Click
+    function setStatus(studentId, status, element) {
+      // 1. Update Logic State
+      attendanceState[studentId] = status;
+
+      // 2. Update Visuals
+      const parent = element.parentElement;
+      
+      // Remove 'active' from all siblings
+      const siblings = parent.querySelectorAll('.circle-btn');
+      siblings.forEach(btn => btn.classList.remove('active'));
+
+      // Add 'active' to clicked circle
+      element.classList.add('active');
+    }
+
+    async function saveAttendance() {
+      const classId = document.getElementById('classSelect').value;
+      const date = document.getElementById('dateInput').value;
+      
+      if(!classId) {
+        alert("Please select a class first!");
+        return;
+      }
+
+      // Show temporary loading text on button
+      const btn = document.querySelector('.save-btn');
+      const originalText = btn.textContent;
+      btn.textContent = "⏳ Saving...";
+
+      try {
+        const res = await fetch('/save_manual_attendance', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ 
+            class_id: classId, 
+            date: date, 
+            attendance: attendanceState 
+          })
+        });
+        
+        const result = await res.json();
+        
+        if(result.success) {
+          alert("✅ Attendance Saved Successfully!");
+        } else {
+          alert("❌ Error: " + result.error);
+        }
+      } catch(e) {
+        console.error(e);
+        alert("❌ Network Error");
+      } finally {
+        btn.textContent = originalText;
+      }
+    }
+  </script>
+
+</body>
+</html>

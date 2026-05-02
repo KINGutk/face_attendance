@@ -1,0 +1,10 @@
+Flask
+mysql-connector-python
+numpy
+opencv-python-headless
+face_recognition
+Werkzeug
+Flask-Mail
+APScheduler
+python-dotenv
+gunicorn

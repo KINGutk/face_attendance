@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<meta name="theme-color" content="#00ff88">
+
+  <meta charset="UTF-8">
+  <title>✅ Student Added Successfully</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+    }
+
+    .checkmark {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 255, 136, 0.1);
+      border: 5px solid #00ff88;
+      box-shadow: 0 0 20px #00ff88;
+      animation: glow 1.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from { box-shadow: 0 0 10px #00ff88; }
+      to { box-shadow: 0 0 30px #00ff88; }
+    }
+
+    .checkmark svg {
+      width: 60px;
+      height: 60px;
+      stroke: #00ff88;
+      stroke-width: 4;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 100;
+      stroke-dashoffset: 100;
+      animation: draw 1s ease-out forwards;
+    }
+
+    @keyframes draw {
+      to { stroke-dashoffset: 0; }
+    }
+
+    h1 {
+      color: #00ff88;
+      margin-top: 30px;
+      font-size: 2em;
+      text-shadow: 0 0 15px #00ff88;
+    }
+
+    p {
+      color: #ccc;
+      margin: 10px 0 30px;
+    }
+
+    .btn-container {
+      display: flex;
+      gap: 20px;
+    }
+
+    a {
+      background: #00ff88;
+      color: #000;
+      text-decoration: none;
+      padding: 12px 25px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 16px;
+      transition: all 0.3s;
+      box-shadow: 0 0 10px #00ff88;
+    }
+
+    a:hover {
+      background: #00cc6a;
+      box-shadow: 0 0 20px #00cc6a;
+      transform: scale(1.05);
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="checkmark">
+    <svg viewBox="0 0 52 52">
+      <path d="M14 27 L22 35 L38 18" />
+    </svg>
+  </div>
+
+  <h1>✅ Student Added Successfully!</h1>
+  <p>Your student has been registered and photo saved successfully.</p>
+
+  <div class="btn-container">
+    <a href="{{ url_for('add_student') }}">➕ Add Another</a>
+    <a href="{{ url_for('index') }}">🏠 Back to Dashboard</a>
+    <a href="{{ url_for('view_attendance') }}">📋 View Attendance</a>
+  </div>
+
+</body>
+</html>

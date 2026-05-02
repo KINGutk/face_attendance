@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#00ff88">
+  <meta charset="UTF-8">
+  <title>👨‍🏫 Faculty Login</title>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #0a0a0a, #000);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .box {
+      background: rgba(255,255,255,0.05);
+      padding: 40px;
+      border-radius: 15px;
+      border: 1px solid #00ff88;
+      box-shadow: 0 0 30px rgba(0,255,136,0.2);
+      width: 320px;
+      text-align: center;
+    }
+    h1 { color: #00ff88; margin-bottom: 20px; text-shadow: 0 0 10px #00ff88; }
+    input {
+      width: 100%; padding: 12px; margin: 10px 0;
+      background: #000; border: 1px solid #444; color: #fff; border-radius: 5px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%; padding: 12px; background: #00ff88; color: #000;
+      border: none; border-radius: 5px; font-weight: bold; cursor: pointer;
+      margin-top: 15px;
+    }
+    button:hover { background: #00cc6a; }
+    .links { margin-top: 20px; font-size: 0.9em; }
+    .links a { color: #00ff88; text-decoration: none; margin: 0 5px; }
+  </style>
+</head>
+<body>
+
+  <div class="box">
+    <h1>👨‍🏫 Faculty Login</h1>
+    {% if error %}
+      <p style="color:#ff4444; background:rgba(255,0,0,0.1); padding:5px;">{{ error }}</p>
+    {% endif %}
+    
+    <form method="POST">
+      <input type="email" name="email" placeholder="Official Email" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <button type="submit">Login</button>
+    </form>
+
+    <div class="links">
+      <a href="{{ url_for('professor_signup') }}">Register New Account</a>
+      <br><br>
+      <a href="{{ url_for('login') }}" style="color:#888;">Admin</a> | 
+      <a href="{{ url_for('student_login') }}" style="color:#888;">Student</a>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>✏️ Edit Class</title>
+  <style>
+    body {
+      background: #0f0f0f;
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; margin: 0;
+    }
+    h1 { color: #00ff88; text-shadow: 0 0 15px #00ff88; margin-bottom: 20px; }
+    
+    form {
+      background: rgba(255,255,255,0.05);
+      width: 400px;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 25px rgba(0,255,136,0.2);
+      border: 1px solid #333;
+    }
+
+    label { display: block; text-align: left; margin-top: 10px; color: #aaa; font-size: 0.9em; }
+    
+    input, select {
+      width: 100%;
+      margin-top: 5px;
+      padding: 10px;
+      border: 1px solid #333;
+      border-radius: 5px;
+      background: #000;
+      color: #fff;
+      outline: none; box-sizing: border-box;
+    }
+    input:focus, select:focus { border-color: #00ff88; }
+
+    .btn-update {
+      width: 100%;
+      padding: 12px;
+      background: #00ff88; color: #000;
+      font-weight: bold; border: none;
+      border-radius: 5px; cursor: pointer;
+      margin-top: 20px; transition: 0.3s;
+    }
+    .btn-update:hover { background: #00cc6a; box-shadow: 0 0 15px #00cc6a; }
+
+    .btn-cancel {
+      display: block; margin-top: 15px;
+      color: #888; text-decoration: none; font-size: 0.9em;
+    }
+    .btn-cancel:hover { color: #fff; }
+  </style>
+</head>
+<body>
+
+  <h1>✏️ Update Class Schedule</h1>
+
+  <form method="POST">
+    <label>Subject Name:</label>
+    <input type="text" name="subject_name" value="{{ class_info.subject_name }}" required>
+
+    <label>Professor:</label>
+    <select name="professor_id" required>
+      {% for p in professors %}
+        <option value="{{ p.id }}" {% if p.id == class_info.professor_id %}selected{% endif %}>
+          {{ p.name }}
+        </option>
+      {% endfor %}
+    </select>
+
+    <label>Semester:</label>
+    <select name="semester" required>
+      <option value="{{ class_info.semester }}" selected>{{ class_info.semester }} (Current)</option>
+      <option value="1st Semester">1st Semester</option>
+      <option value="2nd Semester">2nd Semester</option>
+      <option value="3rd Semester">3rd Semester</option>
+      <option value="4th Semester">4th Semester</option>
+      <option value="5th Semester">5th Semester</option>
+      <option value="6th Semester">6th Semester</option>
+      <option value="7th Semester">7th Semester</option>
+      <option value="8th Semester">8th Semester</option>
+    </select>
+
+    <label>Day of Week:</label>
+    <select name="day_of_week" required>
+        <option value="{{ class_info.day_of_week }}" selected>{{ class_info.day_of_week }} (Current)</option>
+        <option>Monday</option>
+        <option>Tuesday</option>
+        <option>Wednesday</option>
+        <option>Thursday</option>
+        <option>Friday</option>
+        <option>Saturday</option>
+        <option>Sunday</option>
+    </select>
+
+    <label>Time Slot:</label>
+    <div style="display:flex; gap:10px;">
+      <input type="time" name="start_time" value="{{ class_info.start_time }}" required>
+      <input type="time" name="end_time" value="{{ class_info.end_time }}" required>
+    </div>
+
+    <button type="submit" class="btn-update">💾 Save Changes</button>
+    <a href="{{ url_for('manage_classes') }}" class="btn-cancel">Cancel</a>
+  </form>
+
+</body>
+</html>

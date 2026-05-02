@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#00ff88">
+  <meta charset="UTF-8">
+  <title>👨‍🏫 Faculty Registration</title>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #0a0a0a, #000);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .form-container {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 0 30px rgba(0, 255, 136, 0.2);
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid #333;
+      text-align: center;
+    }
+    h1 { 
+      color: #00ff88; 
+      margin-bottom: 20px; 
+      text-shadow: 0 0 15px #00ff88; 
+    }
+    
+    label { display: block; text-align: left; margin-top: 15px; color: #ccc; }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 5px;
+      background: #000;
+      border: 1px solid #444;
+      color: #fff;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    input:focus { border-color: #00ff88; outline: none; }
+    
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #00ff88;
+      color: #000;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 25px;
+      font-size: 16px;
+      transition: 0.3s;
+    }
+    button:hover { background: #00cc6a; transform: scale(1.02); }
+    
+    .link-container { margin-top: 20px; font-size: 0.9em; }
+    .link-container a { color: #00ff88; text-decoration: none; }
+    
+    .alert {
+      padding: 10px; margin-bottom: 15px; border-radius: 5px; text-align: center;
+    }
+    .alert-error { background: rgba(255,68,68,0.1); border: 1px solid #ff4444; color: #ff4444; }
+    .alert-success { background: rgba(0,255,136,0.1); border: 1px solid #00ff88; color: #00ff88; }
+  </style>
+</head>
+<body>
+
+  <div class="form-container">
+    <h1>👨‍🏫 Faculty Signup</h1>
+    
+    {% if message %}
+      <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+    {% if error %}
+      <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST">
+      <label>Full Name</label>
+      <input type="text" name="name" placeholder="Dr. John Doe" required>
+
+      <label>College Email</label>
+      <input type="email" name="email" placeholder="name@college.edu" required>
+
+      <label>Password</label>
+      <input type="password" name="password" required>
+
+      <label>Confirm Password</label>
+      <input type="password" name="confirm_password" required>
+
+      <button type="submit">🚀 Apply for Account</button>
+    </form>
+
+    <div class="link-container">
+      <p>Already have an account? <a href="{{ url_for('professor_login') }}">Login Here</a></p>
+    </div>
+  </div>
+
+</body>
+</html>

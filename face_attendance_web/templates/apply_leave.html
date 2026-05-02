@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#00ff88">
+  <meta charset="UTF-8">
+  <title>📝 Apply for Leave</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .form-container {
+      background: rgba(255,255,255,0.05);
+      padding: 40px;
+      border-radius: 15px;
+      width: 100%;
+      max-width: 600px;
+      border: 1px solid #333;
+      box-shadow: 0 0 25px rgba(0,255,136,0.1);
+    }
+    h2 { color: #00ff88; text-align: center; margin-bottom: 30px; }
+    
+    label { display: block; margin-top: 15px; color: #ccc; }
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      margin-top: 5px;
+      background: #000;
+      border: 1px solid #444;
+      color: #fff;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 15px;
+      background: #00ff88;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 16px;
+      margin-top: 25px;
+      cursor: pointer;
+    }
+    
+    .center-link { text-align: center; margin-top: 30px; }
+    .center-link a { color: #00ff88; text-decoration: none; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="form-container">
+    <h2>📝 Student Leave Application</h2>
+    
+    <form method="POST">
+      <label>Subject (Optional)</label>
+      <select name="subject_name">
+        <option value="">-- Apply for All Subjects --</option>
+        {% for c in classes %}
+          <option value="{{ c.subject_name }}">{{ c.subject_name }}</option>
+        {% endfor %}
+      </select>
+
+      <label>Reason Category</label>
+      <select name="application_purpose" required>
+        <option value="Sick">Sick Leave</option>
+        <option value="Urgent Work">Urgent Work</option>
+        <option value="Family">Family Event</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <label>Detailed Reason</label>
+      <textarea name="application_text" rows="4" placeholder="Explain your reason..." required></textarea>
+
+      <div style="display:flex; gap:15px;">
+        <div style="flex:1;">
+          <label>From Date</label>
+          <input type="date" name="start_date" required>
+        </div>
+        <div style="flex:1;">
+          <label>To Date</label>
+          <input type="date" name="end_date" required>
+        </div>
+      </div>
+
+      <button type="submit">🚀 Submit Application</button>
+    </form>
+
+    <div class="center-link">
+      <a href="{{ url_for('student_dashboard') }}">🏠 Back to Dashboard</a>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<meta name="theme-color" content="#00ff88">
+  <meta charset="UTF-8">
+  <title>📊 Admin Dashboard</title>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #0a0a0a, #000);
+      font-family: 'Poppins', sans-serif;
+      color: #fff;
+      text-align: center;
+      margin: 0; padding: 0;
+    }
+    
+    /* 🟢 Main Heading - Neon Green */
+    h1 {
+      color: #00ff88;
+      text-shadow: 0 0 25px #00ff88;
+      margin-top: 30px;
+    }
+
+    .stats-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 25px;
+      margin: 40px auto;
+      width: 85%;
+    }
+
+    .stat-box {
+      background: rgba(255,255,255,0.05);
+      border-radius: 15px;
+      padding: 25px;
+      /* 🟢 Green Glow Shadow */
+      box-shadow: 0 0 25px rgba(0, 255, 136, 0.2);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0, 255, 136, 0.1);
+    }
+
+    .stat-box:hover {
+      transform: scale(1.05);
+      /* 🟢 Stronger Green Glow on Hover */
+      box-shadow: 0 0 40px rgba(0, 255, 136, 0.4);
+      border-color: #00ff88;
+    }
+
+    .stat-box h2 {
+      color: #00ff88;
+      font-size: 2.5em;
+      margin: 0;
+    }
+
+    .stat-box p {
+      color: #ccc;
+      font-size: 1em;
+      margin-top: 5px;
+    }
+
+    .btn-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin: 40px 0;
+    }
+
+    /* 🟢 Buttons - Neon Green Background */
+    .btn {
+      background: #00ff88;
+      color: #000;
+      font-weight: bold;
+      padding: 14px 22px;
+      border-radius: 10px;
+      text-decoration: none;
+      box-shadow: 0 0 15px #00ff88;
+      transition: all 0.3s;
+    }
+
+    .btn:hover {
+      background: #00cc6a; /* Slightly darker green for hover */
+      box-shadow: 0 0 25px #00cc6a;
+      transform: scale(1.05);
+      color: #fff;
+    }
+
+    /* Logout Button (Kept Red for Safety) */
+    .btn-logout {
+        background: rgba(255, 68, 68, 0.1);
+        color: #ff4444;
+        border: 1px solid #ff4444;
+        box-shadow: 0 0 15px #ff4444;
+    }
+    .btn-logout:hover {
+        background: #ff4444;
+        color: #fff;
+        box-shadow: 0 0 25px #ff4444;
+    }
+
+    footer {
+      margin-top: 50px;
+      font-size: 0.9em;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎓 Face Attendance Admin Dashboard</h1>
+
+  <div class="stats-container">
+    <div class="stat-box">
+      <h2 id="studentCount">--</h2>
+      <p>👨‍🎓 Students</p>
+    </div>
+    
+    <div class="stat-box">
+      <h2 id="upcomingClass">--</h2>
+      <p>🕒 Upcoming Class</p>
+    </div>
+    <div class="stat-box">
+      <h2 id="pendingSignups">--</h2>
+      <p>🔔 Pending Signups</p>
+    </div>
+  </div>
+
+  <div class="btn-container">
+   
+    <a href="{{ url_for('manage_students') }}" class="btn">👨‍🎓 Manage Students</a>
+    <a href="{{ url_for('manage_professors') }}" class="btn">👨‍🏫 Manage Professors</a>
+    <a href="{{ url_for('manage_classes') }}" class="btn">📚 Manage Classes</a>
+    <a href="{{ url_for('view_attendance') }}" class="btn">📋 View Attendance</a>
+    <a href="{{ url_for('live_attendance') }}" class="btn">🎥 Start Live Attendance</a>
+    <a href="{{ url_for('manual_attendance') }}" class="btn">📝 Manual Attendance</a>
+    <a href="{{ url_for('view_requests') }}" class="btn">🔔 View Signups</a>
+    <a href="{{ url_for('logout') }}" class="btn btn-logout">🚪 Logout</a>
+  </div>
+
+  <footer>
+    <p>© 2025 Published By GDCKKK | Automated Face Attendance System</p>
+  </footer>
+
+  <script>
+    async function loadStats() {
+      try {
+        const res = await fetch("/dashboard_stats");
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        document.getElementById("studentCount").textContent = data.students;
+        document.getElementById("upcomingClass").textContent = data.upcoming_class;
+        document.getElementById("pendingSignups").textContent = data.pending_signups;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    loadStats();
+    setInterval(loadStats, 30000); 
+  </script>
+
+</body>
+</html>

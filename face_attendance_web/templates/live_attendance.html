@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎥 Live Face Scanner</title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#00ff88">
+  <style>
+    /* --- Global Neon Theme --- */
+    body {
+      background: radial-gradient(circle at center, #1a1a1a, #000);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      display: flex; flex-direction: column; align-items: center; 
+      /* 🟢 FIX 1: Allow content to flow naturally from top */
+      justify-content: flex-start; 
+      min-height: 100vh; margin: 0; padding: 20px;
+      /* 🟢 FIX 2: Enable scrolling */
+      overflow-y: auto; 
+    }
+
+    h1 {
+      color: #00ff88;
+      text-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+      margin-bottom: 10px;
+      margin-top: 10px;
+      font-size: 1.8em;
+      text-align: center;
+    }
+
+    /* Class Info Badge */
+    .class-info {
+        background: rgba(0, 255, 136, 0.1);
+        border: 1px solid #00ff88;
+        color: #00ff88;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-weight: bold;
+        margin-bottom: 20px;
+        box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+        font-size: 1.1em;
+        text-align: center;
+    }
+
+    /* --- Camera Container --- */
+    .scanner-container {
+      position: relative;
+      width: 100%;
+      max-width: 600px;
+      border-radius: 20px;
+      padding: 5px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(0, 255, 136, 0.3);
+      box-shadow: 0 0 40px rgba(0, 255, 136, 0.1);
+      /* Ensure it doesn't take up full height on small screens */
+      aspect-ratio: 4/3; 
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+
+    /* The Video Feed */
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 15px;
+      transform: scaleX(-1); /* Mirror effect */
+    }
+
+    /* --- Scanning Animation (Laser Line) --- */
+    .scan-line {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: #00ff88;
+      box-shadow: 0 0 15px #00ff88;
+      animation: scan 3s infinite linear;
+      opacity: 0.7;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    @keyframes scan {
+      0% { top: 10%; }
+      50% { top: 90%; }
+      100% { top: 10%; }
+    }
+
+    /* --- Status Badge --- */
+    .status-badge {
+      margin-top: 25px;
+      padding: 15px 30px;
+      border-radius: 50px;
+      font-size: 1.2em;
+      font-weight: bold;
+      text-align: center;
+      background: #111;
+      border: 1px solid #333;
+      color: #888;
+      width: 90%; max-width: 400px;
+      transition: all 0.3s ease;
+    }
+
+    .status-badge.active-green {
+      background: rgba(0, 255, 136, 0.2);
+      color: #00ff88;
+      border-color: #00ff88;
+      box-shadow: 0 0 25px rgba(0, 255, 136, 0.4);
+    }
+
+    .status-badge.active-red {
+      background: rgba(255, 68, 68, 0.2);
+      color: #ff4444;
+      border-color: #ff4444;
+      box-shadow: 0 0 25px rgba(255, 68, 68, 0.4);
+    }
+    
+    .status-badge.active-cyan {
+      background: rgba(0, 229, 255, 0.2);
+      color: cyan;
+      border-color: cyan;
+      box-shadow: 0 0 25px rgba(0, 229, 255, 0.4);
+    }
+
+    .status-badge.active-orange {
+      background: rgba(255, 165, 0, 0.2);
+      color: orange;
+      border-color: orange;
+      box-shadow: 0 0 25px rgba(255, 165, 0, 0.4);
+    }
+
+    /* --- Back Button --- */
+    .btn-back {
+      margin-top: 30px;
+      margin-bottom: 20px; /* 🟢 FIX 3: Extra bottom space */
+      background: transparent;
+      color: #aaa;
+      border: 1px solid #444;
+      padding: 12px 30px;
+      border-radius: 30px;
+      text-decoration: none;
+      font-size: 0.9em;
+      transition: 0.3s;
+    }
+    .btn-back:hover {
+      border-color: #fff;
+      color: #fff;
+      background: rgba(255,255,255,0.05);
+    }
+
+    canvas { display: none; }
+  </style>
+</head>
+<body>
+
+  <h1>📡 Live Attendance Scanner</h1>
+
+  <div id="class-display" class="class-info">⌛ Connecting...</div>
+
+  <div class="scanner-container">
+    <div class="scan-line"></div>
+    <video id="video" autoplay playsinline></video>
+  </div>
+
+  <div id="status" class="status-badge">🔍 Waiting for camera...</div>
+
+  <a href="{{ url_for('index') }}" class="btn-back">⬅ Back to Dashboard</a>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const statusDiv = document.getElementById('status');
+    const classDiv = document.getElementById('class-display');
+
+    // 1. Start Camera
+    navigator.mediaDevices.getUserMedia({ 
+        video: { 
+            facingMode: "user",
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+        } 
+    })
+    .then(stream => { 
+        video.srcObject = stream; 
+        statusDiv.innerText = "🔍 Scanning...";
+    })
+    .catch(err => { 
+        console.error("Camera error:", err);
+        statusDiv.innerText = "❌ Camera Blocked! Check Permissions.";
+        statusDiv.classList.add("active-red");
+    });
+
+    // 2. Loop: Capture Frame & Send to Python
+    setInterval(() => {
+        if (!video.videoWidth) return; 
+
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const dataURL = canvas.toDataURL('image/jpeg', 0.6); // 0.6 quality for speed
+
+        fetch('/process_frame', {
+            method: 'POST',
+            body: JSON.stringify({ image: dataURL }),
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Update Status Text & Color
+            statusDiv.innerText = data.message;
+            statusDiv.classList.remove("active-green", "active-red", "active-cyan", "active-orange");
+
+            if(data.color === "#00ff88" || data.color === "green") statusDiv.classList.add("active-green");
+            else if (data.color === "cyan") statusDiv.classList.add("active-cyan");
+            else if (data.color === "red") statusDiv.classList.add("active-red");
+            else if (data.color === "orange" || data.color === "yellow") statusDiv.classList.add("active-orange");
+
+            // Update Class Info
+            classDiv.innerText = "📚 " + data.current_class;
+        })
+        .catch(err => console.log("Backend busy..."));
+
+    }, 2000); // Check every 2 seconds
+  </script>
+
+</body>
+</html>

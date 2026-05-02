@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#00ff88">
+    <meta charset="UTF-8">
+    <title>📨 Manage Leaves</title>
+    <style>
+        body {
+            background: radial-gradient(circle at top left, #0f0f0f, #000);
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            margin: 0; padding: 20px;
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            align-items: center;
+        }
+        
+        h1 {
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .container { width: 100%; max-width: 900px; flex-grow: 1; }
+        
+        /* --- Leave Card Style --- */
+        .leave-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transition: 0.3s;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        .leave-card:hover {
+            border-color: #00ff88;
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+        
+        /* Header Section */
+        .card-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 15px;
+        }
+        .student-info h2 { margin: 0; font-size: 1.4em; color: #fff; }
+        .student-info span { color: #888; font-size: 0.9em; display: block; margin-top: 4px; }
+        
+        /* Badges */
+        .badge-group { text-align: right; }
+        .badge {
+            padding: 5px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold;
+            display: inline-block; margin-left: 5px; margin-bottom: 5px;
+        }
+        .b-sem { background: #333; color: #fff; border: 1px solid #555; }
+        .b-sub { background: rgba(0, 255, 136, 0.1); color: #00ff88; border: 1px solid #00ff88; }
+        .b-all { background: rgba(0, 170, 255, 0.1); color: #00aaff; border: 1px solid #00aaff; }
+
+        /* Body Section */
+        .card-body { color: #ccc; font-size: 0.95em; }
+        .date-range { 
+            display: inline-block; background: #111; padding: 6px 12px; 
+            border-radius: 6px; margin: 8px 0; color: #fff; border: 1px solid #333;
+            font-weight: bold; letter-spacing: 0.5px;
+        }
+
+        /* Actions */
+        .card-actions {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 10px; flex-wrap: wrap; gap: 15px;
+        }
+        
+        .btn-view {
+            background: transparent; border: 1px solid #aaa; color: #aaa;
+            padding: 8px 18px; border-radius: 20px; cursor: pointer; 
+            font-size: 0.9em; transition: 0.3s; font-weight: bold;
+        }
+        .btn-view:hover { border-color: #fff; color: #fff; background: rgba(255,255,255,0.1); }
+
+        .btn-group { display: flex; gap: 10px; }
+        .btn-approve, .btn-reject {
+            border: none; padding: 10px 25px; border-radius: 30px; 
+            font-weight: bold; cursor: pointer; transition: 0.3s;
+        }
+        .btn-approve { background: #00ff88; color: #000; }
+        .btn-approve:hover { background: #00cc6a; box-shadow: 0 0 15px #00ff88; }
+        .btn-reject { background: rgba(255, 68, 68, 0.1); color: #ff4444; border: 1px solid #ff4444; }
+        .btn-reject:hover { background: #ff4444; color: #fff; box-shadow: 0 0 15px #ff4444; }
+
+        /* --- Stylish Modal --- */
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
+        }
+        .modal-content {
+            background: #151515; margin: 10vh auto; padding: 30px;
+            border: 1px solid #00ff88; width: 90%; max-width: 600px;
+            border-radius: 15px; box-shadow: 0 0 50px rgba(0, 255, 136, 0.2);
+            color: #fff; animation: slideDown 0.3s ease; position: relative;
+        }
+        @keyframes slideDown { from {transform: translateY(-50px); opacity: 0;} to {transform: translateY(0); opacity: 1;} }
+        
+        .close-modal {
+            position: absolute; top: 15px; right: 20px;
+            color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer;
+        }
+        .close-modal:hover { color: #fff; }
+        
+        .modal-text {
+            background: rgba(255,255,255,0.05); padding: 20px;
+            border-radius: 10px; white-space: pre-wrap; line-height: 1.6;
+            margin-top: 15px; border-left: 4px solid #00ff88; color: #ddd;
+        }
+
+        /* --- Dashboard Button --- */
+        .btn-dash {
+            display: inline-block; margin-top: 40px; margin-bottom: 20px;
+            color: #00ff88; text-decoration: none;
+            border: 1px solid #00ff88; padding: 12px 40px;
+            border-radius: 30px; font-weight: bold;
+            transition: 0.3s; background: rgba(0,255,136,0.05);
+        }
+        .btn-dash:hover { background: #00ff88; color: #000; box-shadow: 0 0 20px rgba(0,255,136,0.4); }
+        
+        .empty-msg { text-align: center; color: #666; font-style: italic; font-size: 1.2em; padding: 50px; }
+    </style>
+</head>
+<body>
+
+    <h1>📨 Manage Leaves</h1>
+
+    <div class="container">
+        {% if leave_records %}
+            {% for leave in leave_records %}
+            <div class="leave-card">
+                <div class="card-header">
+                    <div class="student-info">
+                        <h2>{{ leave.name }}</h2>
+                        <span>{{ leave.roll_no }}</span>
+                    </div>
+                    <div class="badge-group">
+                        <span class="badge b-sem">{{ leave.semester }}</span>
+                        
+                        {% if leave.subject_name %}
+                            <span class="badge b-sub">{{ leave.subject_name }}</span>
+                        {% else %}
+                            <span class="badge b-all">All Subjects</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="date-range">📅 {{ leave.start_date }} ➝ {{ leave.end_date }}</div>
+                    <p><strong>📝 Reason:</strong> {{ leave.application_purpose }}</p>
+                </div>
+                
+                <div class="card-actions">
+                    <button class="btn-view" 
+                            onclick="openModal(`{{ leave.application_purpose }}`, `{{ leave.application_text }}`)">
+                        📄 View Full Letter
+                    </button>
+
+                    <form method="POST" class="btn-group">
+                        <input type="hidden" name="leave_id" value="{{ leave.id }}">
+                        <button type="submit" name="action" value="Approved" class="btn-approve">✔ Approve</button>
+                        <button type="submit" name="action" value="Rejected" class="btn-reject">✖ Reject</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-msg">
+                ✨ No pending leave applications for your classes.
+            </div>
+        {% endif %}
+    </div>
+
+    <div id="applicationModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2 style="color:#00ff88; margin-top:0; font-size:1.5em;">📝 Application Details</h2>
+            <p style="color:#aaa; margin-bottom:5px;">Subject:</p>
+            <strong id="modalPurpose" style="font-size:1.1em; color:#fff;"></strong>
+            <div id="modalText" class="modal-text"></div>
+        </div>
+        
+    </div>
+
+    <a href="{{ url_for('professor_dashboard') }}" class="btn-dash">🏠 Back to Dashboard</a>
+
+    <script>
+        function openModal(purpose, text) {
+            document.getElementById('modalPurpose').textContent = purpose;
+            document.getElementById('modalText').textContent = text;
+            document.getElementById('applicationModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('applicationModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('applicationModal')) {
+                closeModal();
+            }
+        }
+    </script>
+
+</body>
+</html>

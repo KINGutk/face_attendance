@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#00ff88">
+  <meta charset="UTF-8">
+  <title>👨‍🎓 Manage Students</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f0f0f, #000);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+      margin: 0; padding: 20px;
+    }
+
+    h1 {
+      color: #00ff88;
+      text-shadow: 0 0 15px #00ff88;
+      margin-bottom: 20px;
+    }
+
+    /* Filter Box Style */
+    .filter-box {
+      margin-bottom: 25px;
+    }
+    label { color: #888; font-weight: bold; margin-right: 10px; }
+    select {
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #333;
+      background: #111;
+      color: #fff;
+      outline: none;
+    }
+
+    /* Table Styling - Exact Match to Manage Professors */
+    table {
+      width: 90%;
+      max-width: 1000px;
+      margin: 0 auto;
+      border-collapse: collapse;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 25px rgba(0, 255, 136, 0.2);
+    }
+    th, td {
+      padding: 15px;
+      border-bottom: 1px solid #333;
+      text-align: left;
+    }
+    th {
+      color: #00ff88;
+      text-transform: uppercase;
+      background: rgba(0, 255, 136, 0.1);
+    }
+    tr:hover { background: rgba(255,255,255,0.02); }
+
+    /* Buttons */
+    .btn {
+      text-decoration: none;
+      padding: 8px 15px;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 0.9em;
+      margin-right: 5px;
+      transition: 0.3s;
+    }
+    .btn-edit { background: rgba(255, 170, 0, 0.2); color: #ffaa00; border: 1px solid #ffaa00; }
+    .btn-edit:hover { background: #ffaa00; color: #000; }
+    
+    .btn-delete { background: rgba(255, 68, 68, 0.2); color: #ff4444; border: 1px solid #ff4444; }
+    .btn-delete:hover { background: #ff4444; color: #fff; }
+
+    /* Semester Badge */
+    .badge-sem {
+        background: #222;
+        color: #fff;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.85em;
+        border: 1px solid #444;
+    }
+
+    .center-btn { margin-top: 40px; }
+    .btn-dash {
+      background: transparent;
+      border: 2px solid #00ff88;
+      color: #00ff88;
+      padding: 10px 25px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+    .btn-dash:hover { background: #00ff88; color: #000; }
+  </style>
+</head>
+<body>
+
+  <h1>👨‍🎓 Manage Students</h1>
+
+  <div class="filter-box">
+    <form method="GET" action="{{ url_for('manage_students') }}">
+        <label>Filter by:</label>
+        <select name="semester" onchange="this.form.submit()">
+            <option value="All" {% if selected_semester == 'All' %}selected{% endif %}>-- All Semesters --</option>
+            <option value="1st Semester" {% if selected_semester == '1st Semester' %}selected{% endif %}>1st Semester</option>
+            <option value="2nd Semester" {% if selected_semester == '2nd Semester' %}selected{% endif %}>2nd Semester</option>
+            <option value="3rd Semester" {% if selected_semester == '3rd Semester' %}selected{% endif %}>3rd Semester</option>
+            <option value="4th Semester" {% if selected_semester == '4th Semester' %}selected{% endif %}>4th Semester</option>
+            <option value="5th Semester" {% if selected_semester == '5th Semester' %}selected{% endif %}>5th Semester</option>
+            <option value="6th Semester" {% if selected_semester == '6th Semester' %}selected{% endif %}>6th Semester</option>
+            <option value="7th Semester" {% if selected_semester == '7th Semester' %}selected{% endif %}>7th Semester</option>
+            <option value="8th Semester" {% if selected_semester == '8th Semester' %}selected{% endif %}>8th Semester</option>
+        </select>
+    </form>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Roll No</th>
+        <th>Semester</th>
+        <th>Email</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for student in students %}
+      <tr>
+        <td>{{ student.id }}</td>
+        <td style="font-weight:bold; color:#fff;">{{ student.name }}</td>
+        <td>{{ student.roll_no }}</td>
+        <td><span class="badge-sem">{{ student.semester }}</span></td>
+        <td style="color:#aaa; font-size:0.9em;">{{ student.email }}</td>
+        <td>
+          <a href="{{ url_for('edit_student', student_id=student.id) }}" class="btn btn-edit">✏️ Edit</a>
+          
+          <a href="{{ url_for('delete_student', student_id=student.id) }}" 
+             class="btn btn-delete" 
+             onclick="return confirm('⚠️ Are you sure you want to remove {{ student.name }}? This will delete their face data too.')">
+             🗑 Delete
+          </a>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" style="text-align:center; padding:40px; color:#666; font-style:italic;">
+          No approved students found in this semester.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="center-btn">
+    <a href="{{ url_for('index') }}" class="btn-dash">🏠 Back to Dashboard</a>
+  </div>
+
+</body>
+</html>

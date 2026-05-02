@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#00ff88">
+  <meta charset="UTF-8">
+  <title>Student Login</title>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #0f0f0f, #1c1c1c, #000);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    .login-box {
+      background: rgba(255,255,255,0.05);
+      padding: 40px;
+      border-radius: 15px;
+      box-shadow: 0 0 25px rgba(0,255,136,0.2);
+      width: 350px;
+      text-align: center;
+    }
+    
+    h1 {
+      color: #00ff88;
+      margin-bottom: 25px;
+      text-shadow: 0 0 15px #00ff88;
+    }
+    
+    input {
+      width: 90%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      font-size: 14px;
+    }
+    
+    input:focus {
+      outline: none;
+      background: rgba(255,255,255,0.15);
+      box-shadow: 0 0 10px #00ff88;
+    }
+    
+    button {
+      background: #00ff88;
+      color: #000;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 15px;
+      width: 100%;
+      box-shadow: 0 0 15px #00ff88;
+      transition: all 0.3s ease;
+    }
+    
+    button:hover {
+      background: #00cc6a;
+      transform: scale(1.02);
+      box-shadow: 0 0 20px #00cc6a;
+    }
+    
+    .error {
+      color: #ff4444;
+      margin: 15px 0;
+      padding: 10px;
+      background: rgba(255, 68, 68, 0.1);
+      border-radius: 8px;
+      border: 1px solid #ff4444;
+    }
+    
+    .signup-link {
+      margin-top: 20px;
+      color: #aaa;
+    }
+    
+    .signup-link a {
+      color: #00ff88;
+      text-decoration: none;
+    }
+    
+    .signup-link a:hover {
+      text-decoration: underline;
+    }
+    
+    .password-container {
+      position: relative;
+      width: 90%;
+      margin: 0 auto;
+    }
+    
+    .toggle-password {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #00ff88;
+      cursor: pointer;
+      width: auto;
+      margin: 0;
+      padding: 0;
+      box-shadow: none;
+    }
+    
+    .toggle-password:hover {
+      background: none;
+      transform: translateY(-50%) scale(1.1);
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h1>🎓 Student Portal</h1>
+    
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+    
+    <form method="POST">
+      <input type="text" name="roll_no" placeholder="Enter Your Roll Number" required>
+      
+      <div class="password-container">
+        <input type="password" name="password" id="password" placeholder="Enter Your Password" required>
+        <button type="button" class="toggle-password" onclick="togglePassword()">👁️</button>
+      </div>
+      
+      <button type="submit">Login</button>
+    </form>
+    
+    <div class="signup-link">
+      <p>Don't have an account? <a href="{{ url_for('student_signup') }}">Sign up here</a></p>
+    </div>
+  </div>
+
+  <script>
+    function togglePassword() {
+      const passwordInput = document.getElementById('password');
+      const toggleButton = document.querySelector('.toggle-password');
+      
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleButton.textContent = '🙈';
+      } else {
+        passwordInput.type = 'password';
+        toggleButton.textContent = '👁️';
+      }
+    }
+  </script>
+</body>
+</html>

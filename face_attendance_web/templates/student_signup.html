@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🎓 Smart Student Signup</title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#00ff88">
+  <style>
+    /* --- Global Neon Theme --- */
+    body {
+      background: radial-gradient(circle at top left, #0f0f0f, #1c1c1c, #000);
+      color: #f5f3f8;
+      font-family: 'Poppins', sans-serif;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; margin: 0; padding: 20px;
+    }
+
+    .form-container {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 35px;
+      border-radius: 15px;
+      box-shadow: 0 0 25px rgba(0, 255, 136, 0.2);
+      width: 100%; max-width: 500px;
+      border: 1px solid rgba(0,255,136,0.1);
+    }
+
+    h1 { color: #00ff88; text-align: center; margin-bottom: 25px; }
+
+    input, select {
+      width: 100%; padding: 12px; border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1); color: #fff;
+      border: 1px solid #333; margin-bottom: 15px;
+    }
+
+    /* --- Multi-Step Camera UI --- */
+    .camera-section {
+      text-align: center; background: rgba(0,0,0,0.3);
+      padding: 15px; border-radius: 10px; border: 1px dashed #444;
+    }
+    
+    video { width: 100%; border-radius: 8px; border: 2px solid #00ff88; }
+    
+    .instruction {
+        font-size: 1.2em; font-weight: bold; color: #ffaa00; margin: 10px 0;
+        text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+    }
+
+    .progress-dots { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; }
+    .dot { width: 12px; height: 12px; background: #333; border-radius: 50%; }
+    .dot.active { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+
+    .btn-capture {
+        background: #00ff88; color: #000; border: none; padding: 10px 20px;
+        border-radius: 30px; font-weight: bold; cursor: pointer; width: 100%;
+        font-size: 1em; margin-top: 10px;
+    }
+    .btn-capture:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+    .gallery { display: flex; gap: 5px; justify-content: center; margin-top: 10px; }
+    .thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 5px; border: 1px solid #555; opacity: 0.5; }
+    .thumb.done { border-color: #00ff88; opacity: 1; }
+
+    /* Submit Button */
+    .btn-submit {
+      background: #00ff88; color: black; font-weight: bold; width: 100%;
+      padding: 14px; border: none; border-radius: 10px; font-size: 1.1em;
+      margin-top: 20px; cursor: pointer;
+    }
+    .btn-submit:disabled { background: #444; color: #888; cursor: not-allowed; }
+
+  </style>
+</head>
+<body>
+
+  <div class="form-container">
+    <h1>🎓 Smart Registration</h1>
+    
+    {% if error %}
+    <div style="color: #ff4444; text-align: center; margin-bottom: 15px;">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data">
+      <input type="text" name="name" required placeholder="Full Name">
+      <input type="text" name="roll_no" required placeholder="Roll Number">
+      <select name="semester" required>
+        <option value="" disabled selected>Select Semester</option>
+        <option value="1st Semester">1st Semester</option>
+        <option value="2nd Semester">2nd Semester</option>
+        <option value="3rd Semester">3rd Semester</option>
+        <option value="4th Semester">4th Semester</option>
+        <option value="5th Semester">5th Semester</option>
+        <option value="6th Semester">6th Semester</option>
+        <option value="7th Semester">7th Semester</option>
+        <option value="8th Semester">8th Semester</option>
+      </select>
+      <input type="email" name="email" required placeholder="Email">
+      <input type="password" name="password" required placeholder="Password">
+      <input type="password" name="confirm_password" required placeholder="Confirm Password">
+
+      <div class="camera-section">
+        <div class="progress-dots">
+            <div id="dot1" class="dot active"></div>
+            <div id="dot2" class="dot"></div>
+            <div id="dot3" class="dot"></div>
+        </div>
+        
+        <p id="instruction" class="instruction">1. Look Straight (Front)</p>
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+
+        <button type="button" id="btnSnap" class="btn-capture" onclick="captureStep()">📸 Capture Front</button>
+
+        <div class="gallery">
+            <img id="thumb1" class="thumb">
+            <img id="thumb2" class="thumb">
+            <img id="thumb3" class="thumb">
+        </div>
+
+        <input type="hidden" name="img_front" id="input_front">
+        <input type="hidden" name="img_left" id="input_left">
+        <input type="hidden" name="img_right" id="input_right">
+      </div>
+
+      <button type="submit" id="btnSubmit" class="btn-submit" disabled>⚠️ Capture All 3 Angles First</button>
+    </form>
+    
+    <div style="text-align: center; margin-top: 15px;">
+        <a href="{{ url_for('student_login') }}" style="color: #00ff88;">Already have an account? Login</a>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const btnSnap = document.getElementById('btnSnap');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const instruction = document.getElementById('instruction');
+
+    let step = 1; // 1=Front, 2=Left, 3=Right
+
+    // Start Camera
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+        .then(stream => { video.srcObject = stream; })
+        .catch(err => alert("Camera Error: " + err));
+
+    async function captureStep() {
+        // Disable button to prevent double clicks
+        btnSnap.disabled = true;
+        btnSnap.textContent = "⏳ Checking Quality...";
+        
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+        
+        const dataURL = canvas.toDataURL('image/jpeg');
+
+        // --- ⚡ SEND TO SERVER FOR CHECK ---
+        try {
+            const response = await fetch('/check_photo_quality', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: dataURL })
+            });
+            
+            const result = await response.json();
+
+            if (!result.valid) {
+                // ❌ IF BAD PHOTO
+                alert(result.error);
+                btnSnap.disabled = false;
+                btnSnap.textContent = "📸 Try Again";
+                return; // Stop here! Don't move to next step.
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert("Connection error. Please try again.");
+            btnSnap.disabled = false;
+            btnSnap.textContent = "📸 Capture";
+            return;
+        }
+
+        // ✅ IF GOOD PHOTO -> PROCEED
+        btnSnap.disabled = false;
+
+        if(step === 1) {
+            document.getElementById('input_front').value = dataURL;
+            document.getElementById('thumb1').src = dataURL;
+            document.getElementById('thumb1').classList.add('done');
+            
+            step = 2;
+            instruction.textContent = "2. Turn Head Slightly LEFT";
+            btnSnap.textContent = "📸 Capture Left Side";
+            document.getElementById('dot2').classList.add('active');
+            
+        } else if(step === 2) {
+            document.getElementById('input_left').value = dataURL;
+            document.getElementById('thumb2').src = dataURL;
+            document.getElementById('thumb2').classList.add('done');
+            
+            step = 3;
+            instruction.textContent = "3. Turn Head Slightly RIGHT";
+            btnSnap.textContent = "📸 Capture Right Side";
+            document.getElementById('dot3').classList.add('active');
+
+        } else if(step === 3) {
+            document.getElementById('input_right').value = dataURL;
+            document.getElementById('thumb3').src = dataURL;
+            document.getElementById('thumb3').classList.add('done');
+            
+            instruction.textContent = "✅ All Angles Captured & Verified!";
+            instruction.style.color = "#00ff88";
+            btnSnap.style.display = "none"; 
+            
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = "📝 Register Account";
+            btnSubmit.style.boxShadow = "0 0 20px #00ff88";
+        }
+    }
+</script>
+
+</body>
+</html>

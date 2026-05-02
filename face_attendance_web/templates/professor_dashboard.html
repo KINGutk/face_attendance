@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#00ff88">
+  <meta charset="UTF-8">
+  <title>👨‍🏫 Professor Dashboard</title>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #0f0f0f, #000);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      text-align: center;
+      margin: 0; padding: 20px;
+    }
+
+    h1 { color: #00ff88; text-shadow: 0 0 15px #00ff88; margin-bottom: 5px; }
+
+    /* Welcome Section */
+    .welcome-card {
+      background: rgba(0, 255, 136, 0.05);
+      border: 1px solid #00ff88;
+      padding: 30px;
+      border-radius: 15px;
+      margin: 0 auto 40px;
+      max-width: 800px;
+      box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+    }
+    .welcome-card h2 { margin: 0; font-size: 2em; }
+    .welcome-card p { color: #aaa; margin-top: 5px; font-size: 1.1em; }
+
+    /* Stats Grid */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto 40px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.05);
+      padding: 25px;
+      border-radius: 15px;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: 0.3s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .card:hover { transform: translateY(-5px); border-color: #00ff88; background: rgba(0,255,136,0.05); }
+
+    .card-number { font-size: 2.5em; font-weight: bold; margin-bottom: 5px; }
+    .card-label { color: #888; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Specific Colors for Cards */
+    .c-green { color: #00ff88; text-shadow: 0 0 10px rgba(0,255,136,0.3); }
+    .c-yellow { color: #ffaa00; text-shadow: 0 0 10px rgba(255,170,0,0.3); }
+    .c-blue { color: #00aaff; text-shadow: 0 0 10px rgba(0,170,255,0.3); }
+
+    /* Action Buttons */
+    .actions {
+      display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 40px;
+    }
+    .btn {
+      background: rgba(0, 255, 136, 0.1);
+      color: #00ff88;
+      border: 1px solid #00ff88;
+      padding: 12px 25px;
+      border-radius: 30px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: 0.3s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn:hover { background: #00ff88; color: #000; box-shadow: 0 0 20px #00ff88; }
+    .btn-logout { border-color: #ff4444; color: #ff4444; background: rgba(255,68,68,0.1); }
+    .btn-logout:hover { background: #ff4444; color: #fff; box-shadow: 0 0 20px #ff4444; }
+
+  </style>
+</head>
+<body>
+
+  <div class="welcome-card">
+    <h2>Welcome, {{ professor.name }}!</h2>
+    <p>📧 {{ professor.email }}</p>
+  </div>
+
+  <div class="dashboard-grid">
+    
+    <div class="card">
+      <div class="card-number c-green">
+        {% if present_count %}{{ present_count }}{% else %}0{% endif %}
+      </div>
+      <div class="card-label">✅ Present Today</div>
+    </div>
+
+    <div class="card">
+      <div class="card-number c-yellow">
+        {% if leaves_count %}{{ leaves_count }}{% else %}0{% endif %}
+      </div>
+      <div class="card-label">📩 Pending Leaves</div>
+    </div>
+
+    <div class="card">
+      <div class="card-number c-blue">{{ classes|length }}</div>
+      <div class="card-label">📚 Your Classes Today</div>
+    </div>
+
+    <div class="card">
+      {% if next_class %}
+        <div style="font-size: 1.2em; font-weight:bold; color:#fff; margin-bottom:5px;">
+          {{ next_class.subject_name }}
+        </div>
+        <div style="color:#00ff88; font-size:0.9em;">
+          ⏰ {{ next_class.start_time }}
+        </div>
+        <div class="card-label" style="margin-top:5px;">Next Class</div>
+      {% else %}
+        <div style="font-size: 1.5em; color:#888;">💤</div>
+        <div class="card-label" style="margin-top:10px;">No more classes</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <div class="actions">
+    <a href="{{ url_for('professor_attendance') }}" class="btn">📊 View Attendance</a>
+    <a href="{{ url_for('professor_manual_attendance') }}" class="btn">📝 Manual Attendance</a>
+   <a href="{{ url_for('professor_leaves') }}" class="btn">📨 Manage Leaves</a>
+    <a href="{{ url_for('logout') }}" class="btn btn-logout">🚪 Logout</a>
+  </div>
+
+</body>
+</html>
