@@ -13,10 +13,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install Python dependencies first (for Docker layer caching)
+# Speed up dlib C++ compilation with parallel build
+ENV CMAKE_BUILD_PARALLEL_LEVEL=4
+
+# Install dlib FIRST as separate layer (longest step, gets cached)
+RUN pip install --no-cache-dir dlib==20.0.1
+
+# Install face_recognition_models from GitHub (avoids pkg_resources issue)
+RUN pip install --no-cache-dir git+https://github.com/ageitgey/face_recognition_models
+
+# Install remaining Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir git+https://github.com/ageitgey/face_recognition_models
 
 # Copy application code
 COPY . .
@@ -30,5 +38,5 @@ RUN mkdir -p faces logs
 # Hugging Face Spaces uses port 7860
 EXPOSE 7860
 
-# Run with gunicorn on port 7860 (HF Spaces requirement)
+# Run with gunicorn on port 7860
 CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--workers", "2", "--timeout", "120", "app:app"]
