@@ -2347,8 +2347,20 @@ def professor_dashboard():
     present_count = cursor.fetchone()['count']
 
     # 4. Get "Pending Leaves" Count
-    # Counts total pending leaves (you can refine this to specific semesters if needed)
-    cursor.execute("SELECT COUNT(*) as count FROM leaves WHERE status = 'Pending'")
+    # Only count leaves for subjects this professor teaches, or general leaves for their semesters
+    cursor.execute("""
+        SELECT COUNT(DISTINCT l.id) as count 
+        FROM leaves l
+        JOIN students s ON l.student_id = s.id
+        WHERE l.status = 'Pending'
+        AND (
+            l.subject_name IN (SELECT subject_name FROM classes WHERE professor_id = %s)
+            OR (
+                (l.subject_name IS NULL OR l.subject_name = '')
+                AND s.semester IN (SELECT semester FROM classes WHERE professor_id = %s)
+            )
+        )
+    """, (professor_id, professor_id))
     leaves_count = cursor.fetchone()['count']
 
     # 5. Determine "Next Class" Logic
