@@ -45,6 +45,15 @@ except ImportError:
 
 app = Flask(__name__)
 
+# --- Setup Persistent Faces Directory ---
+if os.environ.get('SPACE_ID') and os.path.exists('/data'):
+    # Hugging Face Spaces Persistent Storage
+    FACES_DIR = '/data/faces'
+else:
+    # Local fallback
+    FACES_DIR = os.path.join(app.root_path, "faces")
+os.makedirs(FACES_DIR, exist_ok=True)
+
 # --- Load Config from Environment Variables ---
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'super_secure_authentic_key_2026')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
@@ -928,8 +937,8 @@ def delete_student(student_id):
             cursor.execute("DELETE FROM students WHERE id=%s", (student_id,))
             db.commit()
             folder_name = f"{student['roll_no']}_{student['name'].replace(' ', '_')}"
-            # Use relative path
-            face_path = os.path.join(app.root_path, "faces", folder_name)
+            # Use configured FACES_DIR
+            face_path = os.path.join(FACES_DIR, folder_name)
             if os.path.exists(face_path):
                 import shutil
                 shutil.rmtree(face_path)
@@ -1011,7 +1020,7 @@ def student_signup():
                 return render_template('student_signup.html', error="Roll Number already exists!")
 
             safe_name = name.replace(" ", "_")
-            student_folder = os.path.join(app.root_path, "faces", f"{roll_no}_{safe_name}")
+            student_folder = os.path.join(FACES_DIR, f"{roll_no}_{safe_name}")
             os.makedirs(student_folder, exist_ok=True)
 
             with open(os.path.join(student_folder, "front.jpg"), "wb") as f: f.write(bytes_front)
@@ -1856,7 +1865,28 @@ def apply_leave():
             start_date = request.form['start_date']
             end_date = request.form['end_date']
 
-            cursor.execute("INSERT INTO leaves (student_id, subject_name, application_purpose, application_text, start_date, end_date, status) VALUES (%s, %s, %s, %s, %s, %s, 'Pending')", (logged_in_student_id, subject_name, application_purpose, application_text, start_date, end_date))
+            if subject_name:
+                # Specific subject selected
+                cursor.execute("INSERT INTO leaves (student_id, subject_name, application_purpose, application_text, start_date, end_date, status) VALUES (%s, %s, %s, %s, %s, %s, 'Pending')", (logged_in_student_id, subject_name, application_purpose, application_text, start_date, end_date))
+            else:
+                # "All Subjects" selected - insert a separate row for each subject the student takes
+                cursor.execute("SELECT semester FROM students WHERE id = %s", (logged_in_student_id,))
+                student_data_row = cursor.fetchone()
+                
+                if student_data_row:
+                    student_semester = student_data_row['semester']
+                    cursor.execute("SELECT DISTINCT subject_name FROM classes WHERE semester = %s", (student_semester,))
+                    semester_subjects = cursor.fetchall()
+                    
+                    if semester_subjects:
+                        for sub in semester_subjects:
+                            cursor.execute("INSERT INTO leaves (student_id, subject_name, application_purpose, application_text, start_date, end_date, status) VALUES (%s, %s, %s, %s, %s, %s, 'Pending')", (logged_in_student_id, sub['subject_name'], application_purpose, application_text, start_date, end_date))
+                    else:
+                        # Fallback if no classes exist for this semester
+                        cursor.execute("INSERT INTO leaves (student_id, subject_name, application_purpose, application_text, start_date, end_date, status) VALUES (%s, %s, %s, %s, %s, %s, 'Pending')", (logged_in_student_id, None, application_purpose, application_text, start_date, end_date))
+                else:
+                    cursor.execute("INSERT INTO leaves (student_id, subject_name, application_purpose, application_text, start_date, end_date, status) VALUES (%s, %s, %s, %s, %s, %s, 'Pending')", (logged_in_student_id, None, application_purpose, application_text, start_date, end_date))
+                    
             db.commit()
 
             # Send confirmation email to student
@@ -2244,9 +2274,8 @@ def bulk_attendance_action():
 
 @app.route('/face_images/<path:filename>')
 def face_images(filename):
-    # Use relative path
-    face_dir = os.path.join(app.root_path, "faces")
-    return send_from_directory(face_dir, filename)
+    # Use configured FACES_DIR
+    return send_from_directory(FACES_DIR, filename)
 
 # ==================================================
 # 👨‍🏫 PROFESSOR AUTHENTICATION & MANAGEMENT (UPDATED)
