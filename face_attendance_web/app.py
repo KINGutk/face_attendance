@@ -1134,6 +1134,17 @@ def student_dashboard():
         cursor.execute("SELECT * FROM leaves WHERE student_id = %s ORDER BY created_at DESC", (student_id,))
         leave_requests = cursor.fetchall()
         
+        # Group leaves by date submitted
+        grouped_leaves = {}
+        for req in leave_requests:
+            if req['created_at']:
+                date_key = req['created_at'].strftime('%A, %B %d, %Y')
+            else:
+                date_key = "Unknown Date"
+            if date_key not in grouped_leaves:
+                grouped_leaves[date_key] = []
+            grouped_leaves[date_key].append(req)
+            
     except Exception as e:
         print(f"❌ Error fetching student dashboard: {e}")
     finally:
@@ -1144,7 +1155,7 @@ def student_dashboard():
     
     return render_template('student_dashboard.html', 
                           attendance_data=attendance_data, 
-                          leave_requests=leave_requests, 
+                          grouped_leaves=grouped_leaves, 
                           student_name=session['name'])
 
 @app.route('/student_logout')

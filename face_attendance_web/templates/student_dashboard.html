@@ -97,30 +97,39 @@
     </div>
 
     <h2 class="section-title">📄 Leave Status</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Subject</th>
-          <th>Reason</th>
-          <th>Dates</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for l in leave_requests %}
-        <tr>
-          <td>{{ l.subject_name or 'All' }}</td>
-          <td>{{ l.application_purpose }}</td>
-          <td>{{ l.start_date }} to {{ l.end_date }}</td>
-          <td style="font-weight:bold; color: {% if l.status == 'Approved' %}#00ff88{% elif l.status == 'Rejected' %}#ff4444{% else %}#ffaa00{% endif %};">
-            {{ l.status }}
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="4" style="text-align:center; color:#666;">No leave history.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    {% if grouped_leaves %}
+      {% for date_key, requests in grouped_leaves.items() %}
+      <h3 style="color: #bbb; margin-top: 25px; margin-bottom: 10px; font-size: 1.1em; padding-bottom: 5px; border-bottom: 1px dashed #333;">{{ date_key }}</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Reason</th>
+            <th>Dates</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in requests %}
+          <tr>
+            <td>{{ l.subject_name or 'All' }}</td>
+            <td>{{ l.application_purpose }}</td>
+            <td>{{ l.start_date }} to {{ l.end_date }}</td>
+            <td style="font-weight:bold; color: {% if l.status == 'Approved' %}#00ff88{% elif l.status == 'Rejected' %}#ff4444{% else %}#ffaa00{% endif %};">
+              {{ l.status }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endfor %}
+    {% else %}
+      <table>
+        <tbody>
+          <tr><td colspan="4" style="text-align:center; color:#666;">No leave history.</td></tr>
+        </tbody>
+      </table>
+    {% endif %}
   </div>
 
 </body>
