@@ -60,6 +60,12 @@
   <div class="form-container">
     <h2>📝 Student Leave Application</h2>
     
+    {% if message %}
+    <div style="padding: 15px; margin-bottom: 20px; border-radius: 8px; text-align: center; background: {% if 'Error' in message or '❌' in message %}rgba(255, 68, 68, 0.2){% else %}rgba(0, 255, 136, 0.2){% endif %}; border: 1px solid {% if 'Error' in message or '❌' in message %}#ff4444{% else %}#00ff88{% endif %}; color: {% if 'Error' in message or '❌' in message %}#ff4444{% else %}#00ff88{% endif %}; font-weight: bold;">
+      {{ message }}
+    </div>
+    {% endif %}
+    
     <form method="POST">
       <label>Subject (Optional)</label>
       <select name="subject_name">

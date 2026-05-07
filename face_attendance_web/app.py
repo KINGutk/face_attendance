@@ -1900,31 +1900,39 @@ def apply_leave():
                     
             db.commit()
 
-            # Send confirmation email to student
+            # Send confirmation email to student asynchronously
             if student and student['email']:
-                try:
-                    with app.app_context():
-                        msg = Message(
-                            subject="📝 Leave Application Submitted Successfully",
-                            recipients=[student['email']],
-                            body=f"""
-Dear {student['name']},
+                def send_leave_email_async(app_context, student_email, student_name, subject_name, purpose, start, end):
+                    with app_context:
+                        try:
+                            msg = Message(
+                                subject="📝 Leave Application Submitted Successfully",
+                                recipients=[student_email],
+                                body=f"""
+Dear {student_name},
 
 Your leave application has been submitted successfully and is pending approval.
 
 📚 Subject: {subject_name or 'All Subjects'}
-🎯 Purpose: {application_purpose}
-📅 Period: {start_date} to {end_date}
+🎯 Purpose: {purpose}
+📅 Period: {start} to {end}
 
 Best regards,
 Face Attendance System
 Khushal Degree College
-                            """
-                        )
-                        mail.send(msg)
-                        print(f"📧 Leave application confirmation sent to {student['email']}")
-                except Exception as e:
-                    print(f"❌ Failed to send leave confirmation email: {e}")
+                                """
+                            )
+                            mail.send(msg)
+                            print(f"📧 Leave application confirmation sent to {student_email}")
+                        except Exception as e:
+                            print(f"❌ Failed to send leave confirmation email: {e}")
+
+                thread = threading.Thread(
+                    target=send_leave_email_async, 
+                    args=(app.app_context(), student['email'], student['name'], subject_name, application_purpose, start_date, end_date)
+                )
+                thread.daemon = True
+                thread.start()
 
             return render_template('apply_leave.html', student=student, classes=classes, message="✅ Leave application submitted successfully!")
             
