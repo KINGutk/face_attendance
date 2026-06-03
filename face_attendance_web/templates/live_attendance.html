@@ -165,7 +165,7 @@
 
   <div id="status" class="status-badge">🔍 Waiting for camera...</div>
 
-  <a href="{{ url_for('index') }}" class="btn-back">⬅ Back to Dashboard</a>
+  <a href="{{ url_for('professor_dashboard' if session.get('role') == 'professor' else 'index') }}" class="btn-back">⬅ Back to Dashboard</a>
 
   <canvas id="canvas"></canvas>
 

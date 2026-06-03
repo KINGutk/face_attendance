@@ -814,12 +814,77 @@ def dashboard_stats():
         present_result = cursor.fetchone()
         present_today = present_result['present_today'] if present_result else 0
 
-        # 3. Upcoming Class
-        now_time = datetime.now().strftime("%H:%M:%S")
-        current_day = datetime.now().strftime("%A")
-        cursor.execute("SELECT subject_name FROM classes WHERE day_of_week = %s AND start_time > %s ORDER BY start_time ASC LIMIT 1", (current_day, now_time))
-        upcoming_class = cursor.fetchone()
-        upcoming_class_name = upcoming_class['subject_name'] if upcoming_class else "No More Classes"
+        # 3. Upcoming Class (Smart Weekly Wrapping Logic)
+        now = datetime.now()
+        current_time = now.time()
+        current_day = now.strftime("%A")
+        
+        days_map = {
+            'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3,
+            'Friday': 4, 'Saturday': 5, 'Sunday': 6
+        }
+        
+        cursor.execute("SELECT subject_name, day_of_week, start_time FROM classes")
+        all_classes = cursor.fetchall()
+        
+        upcoming_class_name = "No Classes"
+        if all_classes and current_day in days_map:
+            current_day_idx = days_map[current_day]
+            min_diff = None
+            upcoming_cls = None
+            
+            for cls in all_classes:
+                day = cls['day_of_week']
+                if day not in days_map:
+                    continue
+                day_idx = days_map[day]
+                
+                # Extract start_time as time object
+                start_t = cls['start_time']
+                if isinstance(start_t, timedelta):
+                    start_t = (datetime.min + start_t).time()
+                elif isinstance(start_t, str):
+                    try:
+                        start_t = datetime.strptime(start_t, "%H:%M:%S").time()
+                    except ValueError:
+                        try:
+                            start_t = datetime.strptime(start_t, "%H:%M").time()
+                        except ValueError:
+                            continue
+                
+                # Day difference in weekly cycle (0 to 6)
+                day_diff = (day_idx - current_day_idx) % 7
+                
+                # If it's today, check if it's already passed
+                if day_diff == 0:
+                    if start_t <= current_time:
+                        day_diff = 7  # Next week
+                
+                # Total difference in seconds
+                diff_seconds = day_diff * 86400 + (start_t.hour - current_time.hour) * 3600 + (start_t.minute - current_time.minute) * 60 + (start_t.second - current_time.second)
+                
+                if min_diff is None or diff_seconds < min_diff:
+                    min_diff = diff_seconds
+                    upcoming_cls = cls
+                    upcoming_cls['resolved_start_time'] = start_t
+            
+            if upcoming_cls:
+                t = upcoming_cls['resolved_start_time']
+                time_str = t.strftime("%I:%M %p").lstrip('0')
+                day_str = upcoming_cls['day_of_week']
+                
+                day_diff = (days_map[day_str] - current_day_idx) % 7
+                if day_diff == 0:
+                    if t > current_time:
+                        day_label = "Today"
+                    else:
+                        day_label = f"Next {day_str}"
+                elif day_diff == 1:
+                    day_label = "Tomorrow"
+                else:
+                    day_label = day_str
+                
+                upcoming_class_name = f"{upcoming_cls['subject_name']} ({day_label} {time_str})"
 
         # 4. PENDING SIGNUPS (Students + Professors) - REPLACED LEAVES
         cursor.execute("SELECT COUNT(*) as count FROM students WHERE status='pending'")
@@ -1714,8 +1779,9 @@ def get_professor_weekly_attendance():
 # ==================================================
 
 @app.route('/live_attendance')
-@admin_required
 def live_attendance():
+    if 'role' not in session or session['role'] not in ['admin', 'professor']:
+        return redirect(url_for('login'))
     return render_template('live_attendance.html')
 
 def generate_frames():
@@ -2411,17 +2477,79 @@ def professor_dashboard():
     """, (professor_id, professor_id))
     leaves_count = cursor.fetchone()['count']
 
-    # 5. Determine "Next Class" Logic
-    current_time = datetime.now().time()
+    # 5. Determine "Next Class" Logic (Smart Weekly Wrapping Logic)
+    cursor.execute("""
+        SELECT * FROM classes 
+        WHERE professor_id = %s
+    """, (professor_id,))
+    prof_all_classes = cursor.fetchall()
+    
     next_class = None
-    for cls in todays_classes:
-        # Convert string time to time object if necessary
-        # Assuming db returns timedelta or time, logic handles basic comparison
-        # (This depends on your DB driver, simplified here for display)
-        start_t = (datetime.min + cls['start_time']).time() if isinstance(cls['start_time'], timedelta) else cls['start_time']
-        if start_t > current_time:
-            next_class = cls
-            break
+    if prof_all_classes:
+        min_diff = None
+        current_time = datetime.now().time()
+        current_day = datetime.now().strftime("%A")
+        
+        days_map = {
+            'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3,
+            'Friday': 4, 'Saturday': 5, 'Sunday': 6
+        }
+        
+        if current_day in days_map:
+            current_day_idx = days_map[current_day]
+            
+            for cls in prof_all_classes:
+                day = cls['day_of_week']
+                if day not in days_map:
+                    continue
+                day_idx = days_map[day]
+                
+                # Extract start_time as time object
+                start_t = cls['start_time']
+                if isinstance(start_t, timedelta):
+                    start_t = (datetime.min + start_t).time()
+                elif isinstance(start_t, str):
+                    try:
+                        start_t = datetime.strptime(start_t, "%H:%M:%S").time()
+                    except ValueError:
+                        try:
+                            start_t = datetime.strptime(start_t, "%H:%M").time()
+                        except ValueError:
+                            continue
+                
+                # Day difference in weekly cycle (0 to 6)
+                day_diff = (day_idx - current_day_idx) % 7
+                
+                # If it's today, check if it's already passed
+                if day_diff == 0:
+                    if start_t <= current_time:
+                        day_diff = 7  # Next week
+                
+                # Total difference in seconds
+                diff_seconds = day_diff * 86400 + (start_t.hour - current_time.hour) * 3600 + (start_t.minute - current_time.minute) * 60 + (start_t.second - current_time.second)
+                
+                if min_diff is None or diff_seconds < min_diff:
+                    min_diff = diff_seconds
+                    next_class = cls
+                    next_class['resolved_start_time'] = start_t
+                    
+            if next_class:
+                t = next_class['resolved_start_time']
+                time_str = t.strftime("%I:%M %p").lstrip('0')
+                day_str = next_class['day_of_week']
+                
+                day_diff = (days_map[day_str] - current_day_idx) % 7
+                if day_diff == 0:
+                    if t > current_time:
+                        day_label = "Today"
+                    else:
+                        day_label = f"Next {day_str}"
+                elif day_diff == 1:
+                    day_label = "Tomorrow"
+                else:
+                    day_label = day_str
+                
+                next_class['display_time'] = f"{day_label} at {time_str}"
 
     db.close()
 

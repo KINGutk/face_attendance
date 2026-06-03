@@ -114,7 +114,7 @@
           {{ next_class.subject_name }}
         </div>
         <div style="color:#00ff88; font-size:0.9em;">
-          ⏰ {{ next_class.start_time }}
+          ⏰ {% if next_class.display_time %}{{ next_class.display_time }}{% else %}{{ next_class.start_time }}{% endif %}
         </div>
         <div class="card-label" style="margin-top:5px;">Next Class</div>
       {% else %}
@@ -126,9 +126,10 @@
   </div>
 
   <div class="actions">
+    <a href="{{ url_for('live_attendance') }}" class="btn">🎥 Start Live Attendance</a>
     <a href="{{ url_for('professor_attendance') }}" class="btn">📊 View Attendance</a>
     <a href="{{ url_for('professor_manual_attendance') }}" class="btn">📝 Manual Attendance</a>
-   <a href="{{ url_for('professor_leaves') }}" class="btn">📨 Manage Leaves</a>
+    <a href="{{ url_for('professor_leaves') }}" class="btn">📨 Manage Leaves</a>
     <a href="{{ url_for('logout') }}" class="btn btn-logout">🚪 Logout</a>
   </div>
 
