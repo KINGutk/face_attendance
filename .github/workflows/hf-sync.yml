@@ -17,6 +17,6 @@ jobs:
       - name: Push to HF
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: ^
-          git remote add hf https://kabeerUTK:$HF_TOKEN@huggingface.co/spaces/kabeerUTK/advanced-face-attendance ^^
+        run: |
+          git remote add hf https://kabeerUTK:$HF_TOKEN@huggingface.co/spaces/kabeerUTK/advanced-face-attendance
           git push hf feature/advanced-ai:main --force
