@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev \
     liblapack-dev \
     libx11-dev \
-    libglib2.0-0 \
+    libglib2.0-0 
+    libgl1-mesa-glx \
     git \
     && rm -rf /var/lib/apt/lists/*
 
