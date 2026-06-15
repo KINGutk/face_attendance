@@ -72,13 +72,33 @@ import os
 
 MODEL_PATH = 'yolov8n-face.pt'
 if not os.path.exists(MODEL_PATH):
-    print("📥 Downloading specialized YOLOv8 Face model from GitHub...")
-    try:
-        url = "https://github.com/akanametov/yolo-face/releases/download/v0.0.0/yolov8n-face.pt"
-        urllib.request.urlretrieve(url, MODEL_PATH)
-        print("✅ YOLOv8 Face model downloaded successfully!")
-    except Exception as e:
-        print(f"❌ Failed to download model: {e}")
+    print("📥 Downloading specialized YOLOv8 Face model from Mirror...")
+    
+    # 2 Working Mirror links (agar ek fail ho toh doosra chal jaye)
+    urls = [
+        "https://github.com/SannketNikam/Face-Detection/raw/main/yolov8n-face.pt",
+        "https://huggingface.co/junjiang/GestureFace/resolve/main/yolov8n-face.pt"
+    ]
+    
+    downloaded = False
+    for url in urls:
+        try:
+            print(f"🔗 Trying to download from: {url}")
+            urllib.request.urlretrieve(url, MODEL_PATH)
+            print("✅ YOLOv8 Face model downloaded successfully!")
+            downloaded = True
+            break
+        except Exception as e:
+            print(f"⚠️ Failed from this link: {e}")
+            
+    if not downloaded:
+        print("❌ All downloads failed. Please check internet or download manually.")
+
+from ultralytics import YOLO
+import torch
+import torchvision.transforms as transforms
+from torchvision.models import resnet50
+import pickle
 
 yolo_model = YOLO(MODEL_PATH)
 
