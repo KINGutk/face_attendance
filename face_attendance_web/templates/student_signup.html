@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎓 Smart Student Signup</title>
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
   <meta name="theme-color" content="#00ff88">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap');
@@ -29,429 +30,456 @@
       font-family: 'Inter', sans-serif;
       min-height: 100vh;
       display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-    }
-
-    .kyc-container {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 30px;
-      width: 100%;
-      max-width: 900px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 30px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-    }
-
-    h2 {
-      font-family: 'Space Grotesk', sans-serif;
-      color: var(--green);
-      margin-bottom: 20px;
-      font-size: 24px;
-    }
-
-    .form-group {
-      margin-bottom: 15px;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 5px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .form-group input, .form-group select {
-      width: 100%;
-      padding: 12px;
-      background: rgba(0,0,0,0.3);
-      border: 1px solid var(--border);
-      color: white;
-      border-radius: 10px;
-      outline: none;
-      transition: all 0.3s;
-    }
-
-    .form-group input:focus, .form-group select:focus {
-      border-color: var(--blue);
-      box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
-    }
-
-    /* Camera Section */
-    .camera-section {
-      display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      background: rgba(0,0,0,0.2);
-      border-radius: 15px;
-      padding: 20px;
-      border: 1px dashed var(--border);
+      padding: 30px 16px 60px;
+      overflow-x: hidden;
     }
 
-    .camera-wrapper {
-      position: relative;
-      width: 300px;
-      height: 300px;
-      border-radius: 50%;
-      overflow: hidden;
-      margin-bottom: 20px;
-      border: 3px solid var(--blue);
-      box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
-      transition: all 0.4s ease;
+    /* subtle grid bg */
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      background-size: 40px 40px; pointer-events: none; z-index: 0;
     }
 
-    #cameraFeed {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transform: scaleX(-1); /* Mirror effect */
-    }
+    .wrapper { position: relative; z-index: 1; width: 100%; max-width: 520px; }
 
-    #scanLine {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 4px;
-      background: var(--blue);
-      box-shadow: 0 0 15px var(--blue);
-      opacity: 0;
-      transition: opacity 0.3s;
+    /* Header */
+    .header { text-align: center; margin-bottom: 32px; }
+    .header .badge {
+      display: inline-block; background: var(--green-dim); border: 1px solid rgba(0,255,136,0.3);
+      color: var(--green); font-size: 0.72em; font-weight: 600; letter-spacing: 0.12em;
+      text-transform: uppercase; padding: 5px 14px; border-radius: 20px; margin-bottom: 14px;
     }
+    .header h1 { font-family: 'Space Grotesk', sans-serif; font-size: 2em; font-weight: 700; color: #fff; line-height: 1.1; }
+    .header h1 span { color: var(--green); }
+    .header p { color: var(--muted); font-size: 0.88em; margin-top: 8px; }
 
-    #scanLine.active {
-      opacity: 1;
-      animation: scanAnim 1.5s infinite alternate linear;
+    /* Form card */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; margin-bottom: 16px; backdrop-filter: blur(10px); }
+    .card-title { font-family: 'Space Grotesk', sans-serif; font-size: 0.8em; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 18px; }
+
+    /* Inputs */
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 0.8em; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    .field input, .field select {
+      width: 100%; padding: 11px 14px; background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 0.92em; outline: none; transition: border-color 0.2s;
     }
+    .field input:focus, .field select:focus { border-color: rgba(0,255,136,0.5); }
+    .field select option { background: #1a1a1a; color: #fff; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-    @keyframes scanAnim {
-      0% { top: 0%; }
-      100% { top: 100%; }
+    /* ===== KYC Camera Section ===== */
+    .kyc-section { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 20px; }
+    .kyc-header { padding: 14px 18px; background: rgba(0,255,136,0.05); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .kyc-header .kyc-icon { font-size: 1.3em; }
+    .kyc-header .kyc-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.95em; }
+    .kyc-header .kyc-sub { font-size: 0.75em; color: var(--muted); margin-top: 1px; }
+
+    /* Step progress bar */
+    .step-track { display: flex; align-items: center; padding: 14px 18px; gap: 4px; }
+    .step-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; }
+    .step-item:not(:last-child)::after { content: ''; position: absolute; top: 10px; left: 55%; right: -45%; height: 2px; background: var(--border); z-index: 0; }
+    .step-item.done:not(:last-child)::after { background: var(--green); }
+    .step-dot {
+      width: 20px; height: 20px; border-radius: 50%; background: #1a1a1a; border: 2px solid #333;
+      display: flex; align-items: center; justify-content: center; font-size: 0.6em; z-index: 1; position: relative; transition: all 0.3s;
     }
+    .step-item.active .step-dot { border-color: var(--orange); background: rgba(255,170,0,0.2); box-shadow: 0 0 10px rgba(255,170,0,0.4); }
+    .step-item.done .step-dot { border-color: var(--green); background: rgba(0,255,136,0.2); }
+    .step-label { font-size: 0.6em; color: var(--muted); text-align: center; line-height: 1.2; }
+    .step-item.active .step-label { color: var(--orange); }
+    .step-item.done .step-label { color: var(--green); }
 
-    /* Instruction Box */
-    .instruction-box {
-      background: var(--surface);
-      border: 1px solid var(--blue);
-      border-radius: 12px;
-      padding: 15px;
-      width: 100%;
-      text-align: center;
-      transition: all 0.3s;
-    }
+    /* Camera view */
+    .cam-wrapper { position: relative; margin: 0 18px 14px; border-radius: 12px; overflow: hidden; background: #000; aspect-ratio: 4/3; display: none; }
+    .cam-wrapper video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
 
-    .success-box {
-      border-color: var(--green);
-      background: var(--green-dim);
-    }
+    /* Face oval guide overlay */
+    .face-guide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+    .face-oval { width: 46%; aspect-ratio: 3/4; border: 2px solid rgba(0,255,136,0.6); border-radius: 50%; box-shadow: 0 0 0 9999px rgba(0,0,0,0.35); transition: border-color 0.3s; }
+    .face-oval.checking { border-color: var(--orange); animation: pulse-oval 1s infinite; }
+    .face-oval.success { border-color: var(--green); box-shadow: 0 0 20px rgba(0,255,136,0.5), 0 0 0 9999px rgba(0,0,0,0.35); }
+    .face-oval.error { border-color: var(--red); box-shadow: 0 0 20px rgba(255,68,68,0.5), 0 0 0 9999px rgba(0,0,0,0.35); }
+    @keyframes pulse-oval { 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
 
-    #instrIcon { font-size: 30px; margin-bottom: 5px; display: block; }
-    #instrText { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
-    #instrSub { font-size: 13px; color: var(--muted); }
+    /* Corner brackets */
+    .corner { position: absolute; width: 20px; height: 20px; }
+    .corner.tl { top: 10px; left: 10px; border-top: 2px solid var(--green); border-left: 2px solid var(--green); }
+    .corner.tr { top: 10px; right: 10px; border-top: 2px solid var(--green); border-right: 2px solid var(--green); }
+    .corner.bl { bottom: 10px; left: 10px; border-bottom: 2px solid var(--green); border-left: 2px solid var(--green); }
+    .corner.br { bottom: 10px; right: 10px; border-bottom: 2px solid var(--green); border-right: 2px solid var(--green); }
 
-    /* Thumbnails */
-    .thumb-grid {
-      display: flex;
-      gap: 10px;
-      margin-top: 15px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
+    /* Scan line */
+    .scan-line { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--green), transparent); animation: scan 2.5s infinite linear; opacity: 0; }
+    .scan-line.active { opacity: 0.7; }
+    @keyframes scan { 0%{ top: 15%; } 50%{ top: 85%; } 100%{ top: 15%; } }
 
-    .thumb-img {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      object-fit: cover;
-      border: 1px solid var(--green);
-      opacity: 0;
-      animation: popIn 0.3s forwards;
-    }
+    /* Instruction box */
+    .instruction-box { margin: 0 18px 14px; padding: 12px 16px; background: rgba(255,170,0,0.08); border: 1px solid rgba(255,170,0,0.25); border-radius: 10px; display: flex; align-items: flex-start; gap: 10px; transition: all 0.3s;}
+    .instruction-box .inst-icon { font-size: 1.4em; flex-shrink: 0; margin-top: 1px; }
+    .instruction-box .inst-text { font-size: 0.88em; color: var(--orange); font-weight: 600; line-height: 1.4; }
+    .instruction-box .inst-sub { font-size: 0.78em; color: var(--muted); font-weight: 400; margin-top: 2px; }
+    .instruction-box.success-box { background: rgba(0,255,136,0.08); border-color: rgba(0,255,136,0.25); }
+    .instruction-box.success-box .inst-text { color: var(--green); }
+    .instruction-box.error-box { background: rgba(255,68,68,0.08); border-color: rgba(255,68,68,0.25); }
+    .instruction-box.error-box .inst-text { color: var(--red); }
 
-    @keyframes popIn {
-      to { opacity: 1; transform: scale(1); }
-      from { opacity: 0; transform: scale(0.5); }
-    }
+    /* Captured thumbs */
+    .thumbs-row { display: flex; gap: 6px; padding: 0 18px 14px; flex-wrap: wrap; justify-content: center;}
+    .thumb-slot { width: 48px; height: 48px; border-radius: 6px; border: 1px dashed #333; background: #0d0d0d; overflow: hidden; position: relative; transition: border-color 0.3s; }
+    .thumb-slot.filled { border-color: var(--green); border-style: solid; }
+    .thumb-slot img { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+    .thumb-slot .tick { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,255,136,0.3); font-size: 1.1em; opacity: 0; transition: opacity 0.3s; }
+    .thumb-slot.filled .tick { opacity: 1; }
+    .thumb-count { font-size: 0.75em; color: var(--muted); padding: 0 18px 10px; text-align: center;}
+    .thumb-count span { color: var(--green); font-weight: 600; }
 
-    /* Submit Button */
-    #btnSub {
-      width: 100%;
-      padding: 15px;
-      background: var(--green);
-      color: #000;
-      font-weight: bold;
-      font-size: 16px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      margin-top: 20px;
-      opacity: 0.5;
-      transition: all 0.3s;
-    }
+    /* Capture button / Start button */
+    .btn-capture { margin: 0 18px 18px; width: calc(100% - 36px); padding: 15px; background: var(--blue); color: #000; border: none; border-radius: 10px; font-weight: 700; font-size: 1em; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);}
+    .btn-capture:hover { transform: scale(1.02); }
 
-    #btnSub:not(:disabled) {
-      opacity: 1;
-      box-shadow: 0 0 20px var(--green-dim);
-    }
+    /* Submit */
+    .btn-submit { width: 100%; padding: 15px; background: linear-gradient(135deg, #00ff88, #00cc6a); color: #000; border: none; border-radius: 10px; font-weight: 700; font-size: 1em; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
+    .btn-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(0,255,136,0.35); }
+    .btn-submit:disabled { background: #1e1e1e; color: #444; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    #btnSub:not(:disabled):hover {
-      transform: translateY(-2px);
-    }
+    /* Error */
+    .error-msg { background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); color: var(--red); padding: 12px 16px; border-radius: 8px; font-size: 0.85em; margin-bottom: 16px; text-align: center; }
 
-    .alert {
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-    .alert-error { background: rgba(255, 68, 68, 0.1); color: var(--red); border: 1px solid var(--red); }
-    .alert-success { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid var(--green); }
+    /* Login link */
+    .login-link { text-align: center; margin-top: 20px; font-size: 0.85em; color: var(--muted); }
+    .login-link a { color: var(--green); text-decoration: none; font-weight: 600; }
 
-    @media(max-width: 768px) {
-      .kyc-container { grid-template-columns: 1fr; }
-    }
+    canvas { display: none; }
+
+    @media (max-width: 400px) { .field-row { grid-template-columns: 1fr; } .card { padding: 20px; } }
   </style>
 </head>
 <body>
 
-  <div class="kyc-container">
-    <div class="form-section">
-      <h2>👤 Student Details</h2>
-      
-      {% if error %}
-        <div class="alert alert-error">{{ error }}</div>
-      {% endif %}
-      {% if message %}
-        <div class="alert alert-success">{{ message }}</div>
-      {% endif %}
+<div class="wrapper">
 
-      <form method="POST" action="{{ url_for('student_signup') }}" id="signupForm">
-        <input type="hidden" name="face_samples" id="input_samples">
-
-        <div class="form-group">
-          <label>Full Name</label>
-          <input type="text" name="name" required placeholder="e.g., Ajmal Khattak">
-        </div>
-        <div class="form-group">
-          <label>Roll Number</label>
-          <input type="text" name="roll_no" required placeholder="e.g., CS-2026-001">
-        </div>
-        <div class="form-group">
-          <label>Email Address</label>
-          <input type="email" name="email" required placeholder="e.g., ajmal@example.com">
-        </div>
-        <div class="form-group">
-          <label>Semester</label>
-          <select name="semester">
-            <option value="1st Semester">1st Semester</option>
-            <option value="2nd Semester">2nd Semester</option>
-            <option value="3rd Semester">3rd Semester</option>
-            <option value="4th Semester">4th Semester</option>
-            <option value="5th Semester">5th Semester</option>
-            <option value="6th Semester" selected>6th Semester</option>
-            <option value="7th Semester">7th Semester</option>
-            <option value="8th Semester">8th Semester</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" name="password" required>
-        </div>
-        <div class="form-group">
-          <label>Confirm Password</label>
-          <input type="password" name="confirm_password" required>
-        </div>
-
-        <button type="submit" id="btnSub" disabled>🔒 Complete Face KYC First</button>
-      </form>
-    </div>
-
-    <div class="camera-section">
-      <h2>📷 Smart Face KYC</h2>
-      
-      <div class="camera-wrapper" id="faceOval">
-        <video id="cameraFeed" autoplay playsinline muted></video>
-        <canvas id="captureCanvas" style="display:none;"></canvas>
-        <div id="scanLine"></div>
-      </div>
-
-      <div id="instrBox" class="instruction-box">
-        <span id="instrIcon">⏳</span>
-        <div id="instrText">Starting Camera...</div>
-        <div id="instrSub">Please allow camera permissions</div>
-      </div>
-
-      <div class="thumb-grid" id="thumbGrid"></div>
-    </div>
+  <div class="header">
+    <div class="badge">🔐 AI-Grade Verification</div>
+    <h1>Student <span>Registration</span></h1>
+    <p>Your face is your ID. Complete all steps to register.</p>
   </div>
 
-  <script>
-    const video = document.getElementById('cameraFeed');
-    const canvas = document.getElementById('captureCanvas');
-    const ctx = canvas.getContext('2d');
+  {% if error %}
+  <div class="error-msg">⚠️ {{ error }}</div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('student_signup') }}" id="signupForm">
+
+    <div class="card">
+      <div class="card-title">📋 Personal Information</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Full Name</label>
+          <input type="text" name="name" required placeholder="e.g. Ajmal Khattak">
+        </div>
+        <div class="field">
+          <label>Roll Number</label>
+          <input type="text" name="roll_no" required placeholder="e.g. 233706">
+        </div>
+      </div>
+      <div class="field">
+        <label>Semester</label>
+        <select name="semester" required>
+          <option value="" disabled selected>Select your semester</option>
+          <option>1st Semester</option><option>2nd Semester</option>
+          <option>3rd Semester</option><option>4th Semester</option>
+          <option>5th Semester</option><option>6th Semester</option>
+          <option>7th Semester</option><option>8th Semester</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" name="email" required placeholder="your@email.com">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" required placeholder="Min. 6 characters">
+        </div>
+        <div class="field">
+          <label>Confirm Password</label>
+          <input type="password" name="confirm_password" required placeholder="Repeat password">
+        </div>
+      </div>
+    </div>
+
+    <div class="kyc-section">
+
+      <div class="kyc-header">
+        <div class="kyc-icon">🪪</div>
+        <div>
+          <div class="kyc-title">Smart Face KYC — 6 Angles</div>
+          <div class="kyc-sub">The system will automatically capture your photos.</div>
+        </div>
+      </div>
+
+      <button type="button" class="btn-capture" id="btnStartCam" onclick="startCamera()">
+        📷 Start Camera for KYC
+      </button>
+
+      <div class="step-track" id="stepTrack" style="display: none;">
+        </div>
+
+      <div class="cam-wrapper" id="camWrapper">
+        <video id="video" autoplay muted playsinline></video>
+        <div class="face-guide">
+          <div class="face-oval" id="faceOval"></div>
+        </div>
+        <div class="corner tl"></div><div class="corner tr"></div>
+        <div class="corner bl"></div><div class="corner br"></div>
+        <div class="scan-line" id="scanLine"></div>
+      </div>
+
+      <div class="instruction-box" id="instrBox" style="display: none;">
+        <div class="inst-icon" id="instrIcon">⏳</div>
+        <div>
+          <div class="inst-text" id="instrText">Loading camera...</div>
+          <div class="inst-sub" id="instrSub">Please allow permissions</div>
+        </div>
+      </div>
+
+      <div class="thumbs-row" id="thumbsRow" style="display: none;"></div>
+      <div class="thumb-count" id="thumbCountDiv" style="display: none;">Captured: <span id="captureCount">0</span> / 6 samples</div>
+
+      <canvas id="canvas"></canvas>
+      <input type="hidden" name="img_front" id="input_front">
+      <input type="hidden" name="img_left" id="input_left">
+      <input type="hidden" name="img_right" id="input_right">
+      <input type="hidden" name="face_samples" id="input_samples">
+
+    </div>
+
+    <button type="submit" class="btn-submit" id="btnSubmit" disabled>
+      ⚠️ Complete Face KYC First
+    </button>
+
+  </form>
+
+  <div class="login-link">
+    Already registered? <a href="{{ url_for('student_login') }}">Sign in here</a>
+  </div>
+
+</div>
+
+<script>
+// =============================================
+// NAYE 6 SPECIFIC KYC STEPS
+// =============================================
+const STEPS = [
+  { id: 'front',  icon: '👤', label: 'Straight', instruction: 'Look Straight', sub: 'Position your face inside the oval', targetInput: 'input_front' },
+  { id: 'left',   icon: '⬅️', label: 'Left',     instruction: 'Look Left',     sub: 'Turn your head slightly left', targetInput: 'input_left' },
+  { id: 'right',  icon: '➡️', label: 'Right',    instruction: 'Look Right',    sub: 'Turn your head slightly right', targetInput: 'input_right' },
+  { id: 'up',     icon: '⬆️', label: 'Up',       instruction: 'Look Up',       sub: 'Tilt your head up just a bit', targetInput: null },
+  { id: 'down',   icon: '⬇️', label: 'Down',     instruction: 'Look Down',     sub: 'Tilt your head down a little', targetInput: null },
+  { id: 'smile',  icon: '😊', label: 'Smile',    instruction: 'Smile',         sub: 'Give a natural smile', targetInput: null }
+];
+
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const btnStartCam = document.getElementById('btnStartCam');
+const camWrapper = document.getElementById('camWrapper');
+const stepTrack = document.getElementById('stepTrack');
+const instrBox = document.getElementById('instrBox');
+const thumbsRow = document.getElementById('thumbsRow');
+const thumbCountDiv = document.getElementById('thumbCountDiv');
+const countEl = document.getElementById('captureCount');
+
+const instrIcon = document.getElementById('instrIcon');
+const instrText = document.getElementById('instrText');
+const instrSub = document.getElementById('instrSub');
+const faceOval = document.getElementById('faceOval');
+const scanLine = document.getElementById('scanLine');
+const btnSubmit = document.getElementById('btnSubmit');
+
+let currentStep = 0;
+let allSamples = [];
+let thumbCount = 0;
+let stream = null;
+let autoScanInterval = null;
+let isScanning = false;
+
+function buildStepTrack() {
+  STEPS.forEach((s, i) => {
+    const item = document.createElement('div');
+    item.className = 'step-item';
+    item.id = 'stepItem' + i;
+    item.innerHTML = `<div class="step-dot">${s.icon}</div><div class="step-label">${s.label}</div>`;
+    stepTrack.appendChild(item);
+  });
+}
+
+function buildThumbs() {
+  for (let i = 0; i < STEPS.length; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'thumb-slot';
+    slot.id = 'thumb_' + i;
+    slot.innerHTML = `<img id="timg_${i}"><div class="tick">✓</div>`;
+    thumbsRow.appendChild(slot);
+  }
+}
+
+function showInstruction(index) {
+  const s = STEPS[index];
+  instrIcon.textContent = s.icon;
+  instrText.textContent = `Step ${index+1}: ${s.instruction}`;
+  instrSub.textContent = s.sub;
+  instrBox.className = 'instruction-box';
+  faceOval.className = 'face-oval checking';
+  
+  STEPS.forEach((_, i) => {
+    const el = document.getElementById('stepItem' + i);
+    el.className = 'step-item' + (i < index ? ' done' : i === index ? ' active' : '');
+  });
+}
+
+function addThumb(base64) {
+  const slot = document.getElementById('thumb_' + thumbCount);
+  const img = document.getElementById('timg_' + thumbCount);
+  if (slot && img) {
+    img.src = base64;
+    slot.classList.add('filled');
+  }
+  thumbCount++;
+  countEl.textContent = thumbCount;
+}
+
+// delay helper
+const delay = ms => new Promise(res => setTimeout(res, ms));
+
+// =============================================
+// START CAMERA
+// =============================================
+async function startCamera() {
+  btnStartCam.style.display = 'none';
+  stepTrack.style.display = 'flex';
+  camWrapper.style.display = 'block';
+  instrBox.style.display = 'flex';
+  thumbsRow.style.display = 'flex';
+  thumbCountDiv.style.display = 'block';
+
+  buildStepTrack();
+  buildThumbs();
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
+    video.srcObject = stream;
+    video.play();
     
-    const instrIcon = document.getElementById('instrIcon');
-    const instrText = document.getElementById('instrText');
-    const instrSub = document.getElementById('instrSub');
-    const instrBox = document.getElementById('instrBox');
-    const scanLine = document.getElementById('scanLine');
-    const faceOval = document.getElementById('faceOval');
-    const thumbGrid = document.getElementById('thumbGrid');
-    const btnSub = document.getElementById('btnSub');
+    showInstruction(currentStep);
+    startAutoScanner();
+  } catch (err) {
+    instrBox.className = 'instruction-box error-box';
+    instrIcon.textContent = '❌';
+    instrText.textContent = 'Camera Blocked';
+    instrSub.textContent = 'Please allow camera permissions.';
+  }
+}
 
-    // KYC Steps
-    const STEPS = [
-      { icon: '👤', title: 'Look Straight', sub: 'Position your face clearly in the center' },
-      { icon: '⬆️', title: 'Look Slightly Up', sub: 'Tilt your head up just a bit' },
-      { icon: '⬇️', title: 'Look Slightly Down', sub: 'Tilt your head down a little' },
-      { icon: '⬅️', title: 'Look Left', sub: 'Turn your head slightly to the left' },
-      { icon: '➡️', title: 'Look Right', sub: 'Turn your head slightly to the right' },
-      { icon: '😊', title: 'Smile', sub: 'Give a natural smile for Liveness' },
-      { icon: '😐', title: 'Neutral Face', sub: 'Keep a relaxed, normal expression' }
-    ];
+// =============================================
+// AUTO SCANNER AI LOOP
+// =============================================
+function startAutoScanner() {
+  scanLine.classList.add('active');
+  
+  autoScanInterval = setInterval(async () => {
+    if (isScanning || currentStep >= STEPS.length) return;
+    
+    // IMPORTANT FIX: Avoid mobile empty buffer crash
+    if (video.videoWidth === 0 || video.videoHeight === 0) return; 
 
-    let currentStep = 0;
-    let allSamples = [];
-    let stream = null;
-    let autoScanInterval = null;
-    let isScanning = false;
+    isScanning = true;
 
-    // 1. Initialize Camera
-    async function startCamera() {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
-        video.srcObject = stream;
-        video.play();
-        showInstruction(currentStep);
-        
-        // Start the Auto-Capture Loop
-        startAutoScanner();
-      } catch (err) {
-        instrIcon.textContent = '❌';
-        instrText.textContent = 'Camera Error';
-        instrSub.textContent = 'Please allow camera access in your browser.';
-        instrBox.style.borderColor = 'var(--red)';
-        faceOval.style.borderColor = 'var(--red)';
-      }
-    }
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const base64Image = canvas.toDataURL('image/jpeg', 0.85);
 
-    function showInstruction(index) {
-      instrIcon.textContent = STEPS[index].icon;
-      instrText.textContent = STEPS[index].title;
-      instrSub.textContent  = STEPS[index].sub;
-    }
+    try {
+      const response = await fetch('/check_photo_quality', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64Image })
+      });
+      const result = await response.json();
 
-    function addThumb(base64) {
-      const img = document.createElement('img');
-      img.src = base64;
-      img.className = 'thumb-img';
-      thumbGrid.appendChild(img);
-    }
-
-    const delay = ms => new Promise(res => setTimeout(res, ms));
-
-    // 2. Auto-Scanner Brain (Checks with Backend)
-    function startAutoScanner() {
-      scanLine.classList.add('active');
-      
-      autoScanInterval = setInterval(async () => {
-        // Skip if currently processing or finished
-        if (isScanning || currentStep >= STEPS.length) return;
-        isScanning = true;
-
-        // Grab current frame
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const base64Image = canvas.toDataURL('image/jpeg', 0.8);
-
-        try {
-          // Verify frame quality via Backend (YOLOv8 check)
-          const response = await fetch('/check_photo_quality', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: base64Image })
-          });
-          const result = await response.json();
-
-          if (result.valid) {
-            // 🎉 Perfect Frame Detected!
-            faceOval.style.borderColor = 'var(--green)';
-            faceOval.style.boxShadow = '0 0 30px var(--green)';
-            await saveFrameAndNext(base64Image);
-          } else {
-            // ⚠️ Frame issue (blur, multi-face, etc.)
-            faceOval.style.borderColor = 'var(--red)';
-            faceOval.style.boxShadow = '0 0 20px rgba(255, 68, 68, 0.3)';
-            instrSub.textContent = `⚠️ ${result.error}`; 
-            instrSub.style.color = 'var(--red)';
-          }
-        } catch (err) {
-          console.log("Scanner error:", err);
-        }
-
-        isScanning = false;
-      }, 1500); // Check every 1.5 seconds
-    }
-
-    // 3. Save and Move to Next Step
-    async function saveFrameAndNext(base64Image) {
-      isScanning = true; // Pause scanning
-
-      allSamples.push(base64Image);
-      addThumb(base64Image);
-
-      // Success UI Feedback
-      instrBox.className = 'instruction-box success-box';
-      instrText.style.color = 'var(--green)';
-      instrText.textContent = `✅ ${STEPS[currentStep].title} Captured!`;
-      instrSub.textContent = 'Perfect!';
-      instrSub.style.color = 'var(--text)';
-
-      // Camera Flash effect
-      video.style.opacity = '0.2';
-      setTimeout(() => video.style.opacity = '1', 150);
-
-      await delay(1200); // Let user see success message
-
-      currentStep++;
-
-      if (currentStep < STEPS.length) {
-        // Load next step
-        instrBox.className = 'instruction-box';
-        instrText.style.color = '';
-        faceOval.style.borderColor = 'var(--blue)';
-        faceOval.style.boxShadow = '0 0 20px var(--blue)';
-        showInstruction(currentStep);
-        isScanning = false; // Resume scanning
+      if (result.valid) {
+        // AI APPOVED THE FRAME!
+        faceOval.className = 'face-oval success';
+        await saveFrameAndNext(base64Image);
       } else {
-        // 🏁 KYC Complete
-        clearInterval(autoScanInterval);
-        document.getElementById('input_samples').value = JSON.stringify(allSamples);
-        scanLine.classList.remove('active');
-        
-        if (stream) stream.getTracks().forEach(t => t.stop());
-
-        instrBox.className = 'instruction-box success-box';
-        instrIcon.textContent = '🎉';
-        instrText.style.color = 'var(--green)';
-        instrText.textContent = 'KYC Complete!';
-        instrSub.textContent  = 'All angles captured securely.';
-
-        video.style.display = 'none';
-        faceOval.style.background = 'url("https://cdn-icons-png.flaticon.com/512/190/190411.png") center/50% no-repeat var(--green-dim)';
-
-        btnSub.disabled = false;
-        btnSub.textContent = '🎓 Submit Registration';
+        // Error in frame
+        faceOval.className = 'face-oval error';
+        instrBox.className = 'instruction-box error-box';
+        instrSub.textContent = `⚠️ ${result.error}`; 
       }
-    }
+    } catch (err) {}
 
-    window.addEventListener('load', startCamera);
-  </script>
+    isScanning = false;
+  }, 1200); // Check every 1.2s
+}
+
+async function saveFrameAndNext(base64Image) {
+  isScanning = true; 
+
+  const s = STEPS[currentStep];
+  
+  // Save to form inputs if required (e.g. Front, Left, Right for backend script)
+  if (s.targetInput) {
+    document.getElementById(s.targetInput).value = base64Image;
+  }
+  
+  allSamples.push(base64Image);
+  addThumb(base64Image);
+
+  // Success message
+  instrBox.className = 'instruction-box success-box';
+  instrText.textContent = `✅ ${s.instruction} Captured!`;
+  instrSub.textContent = 'Perfect!';
+
+  // Flash effect
+  video.style.opacity = '0.3';
+  setTimeout(() => video.style.opacity = '1', 150);
+
+  await delay(1200);
+
+  currentStep++;
+
+  if (currentStep < STEPS.length) {
+    // Next
+    showInstruction(currentStep);
+    isScanning = false;
+  } else {
+    // ALL DONE
+    clearInterval(autoScanInterval);
+    document.getElementById('input_samples').value = JSON.stringify(allSamples);
+    scanLine.classList.remove('active');
+    
+    if (stream) stream.getTracks().forEach(t => t.stop());
+
+    instrBox.className = 'instruction-box success-box';
+    instrIcon.textContent = '🎉';
+    instrText.textContent = 'Verification Complete!';
+    instrSub.textContent  = 'All 6 angles captured securely.';
+
+    camWrapper.style.display = 'none';
+
+    btnSubmit.disabled = false;
+    btnSubmit.textContent = '🎓 Complete Registration';
+    btnSubmit.style.boxShadow = '0 0 30px rgba(0,255,136,0.3)';
+  }
+}
+</script>
+
 </body>
 </html>
