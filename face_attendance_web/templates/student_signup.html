@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎓 Smart Student Signup</title>
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
   <meta name="theme-color" content="#00ff88">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap');
@@ -30,663 +29,429 @@
       font-family: 'Inter', sans-serif;
       min-height: 100vh;
       display: flex;
-      flex-direction: column;
+      justify-content: center;
       align-items: center;
-      padding: 30px 16px 60px;
-      overflow-x: hidden;
+      padding: 20px;
     }
 
-    /* subtle grid bg */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .wrapper {
-      position: relative;
-      z-index: 1;
-      width: 100%;
-      max-width: 520px;
-    }
-
-    /* Header */
-    .header {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-    .header .badge {
-      display: inline-block;
-      background: var(--green-dim);
-      border: 1px solid rgba(0,255,136,0.3);
-      color: var(--green);
-      font-size: 0.72em;
-      font-weight: 600;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      padding: 5px 14px;
-      border-radius: 20px;
-      margin-bottom: 14px;
-    }
-    .header h1 {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 2em;
-      font-weight: 700;
-      color: #fff;
-      line-height: 1.1;
-    }
-    .header h1 span { color: var(--green); }
-    .header p { color: var(--muted); font-size: 0.88em; margin-top: 8px; }
-
-    /* Form card */
-    .card {
+    .kyc-container {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 28px;
-      margin-bottom: 16px;
-      backdrop-filter: blur(10px);
-    }
-    .card-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.8em;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 18px;
-    }
-
-    /* Inputs */
-    .field { margin-bottom: 14px; }
-    .field label { display: block; font-size: 0.8em; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
-    .field input, .field select {
+      border-radius: 20px;
+      padding: 30px;
       width: 100%;
-      padding: 11px 14px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 0.92em;
-      font-family: 'Inter', sans-serif;
-      transition: border-color 0.2s;
-      outline: none;
+      max-width: 900px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
     }
-    .field input:focus, .field select:focus { border-color: rgba(0,255,136,0.5); }
-    .field select option { background: #1a1a1a; color: #fff; }
-    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-    /* ===== KYC Camera Section ===== */
-    .kyc-section {
-      background: rgba(0,0,0,0.4);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
+    h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      color: var(--green);
       margin-bottom: 20px;
+      font-size: 24px;
     }
 
-    .kyc-header {
-      padding: 14px 18px;
-      background: rgba(0,255,136,0.05);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    .form-group {
+      margin-bottom: 15px;
     }
-    .kyc-header .kyc-icon { font-size: 1.3em; }
-    .kyc-header .kyc-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.95em; }
-    .kyc-header .kyc-sub { font-size: 0.75em; color: var(--muted); margin-top: 1px; }
 
-    /* Step progress bar */
-    .step-track {
-      display: flex;
-      align-items: center;
-      padding: 14px 18px;
-      gap: 4px;
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: 14px;
     }
-    .step-item {
-      flex: 1;
+
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 12px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      color: white;
+      border-radius: 10px;
+      outline: none;
+      transition: all 0.3s;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+    }
+
+    /* Camera Section */
+    .camera-section {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
-      position: relative;
+      justify-content: flex-start;
+      background: rgba(0,0,0,0.2);
+      border-radius: 15px;
+      padding: 20px;
+      border: 1px dashed var(--border);
     }
-    .step-item:not(:last-child)::after {
-      content: '';
-      position: absolute;
-      top: 10px;
-      left: 55%;
-      right: -45%;
-      height: 2px;
-      background: var(--border);
-      z-index: 0;
-    }
-    .step-item.done:not(:last-child)::after { background: var(--green); }
-    .step-dot {
-      width: 20px; height: 20px;
-      border-radius: 50%;
-      background: #1a1a1a;
-      border: 2px solid #333;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.6em;
-      z-index: 1;
-      position: relative;
-      transition: all 0.3s;
-    }
-    .step-item.active .step-dot { border-color: var(--orange); background: rgba(255,170,0,0.2); box-shadow: 0 0 10px rgba(255,170,0,0.4); }
-    .step-item.done .step-dot { border-color: var(--green); background: rgba(0,255,136,0.2); }
-    .step-label { font-size: 0.6em; color: var(--muted); text-align: center; line-height: 1.2; }
-    .step-item.active .step-label { color: var(--orange); }
-    .step-item.done .step-label { color: var(--green); }
 
-    /* Camera view */
-    .cam-wrapper {
+    .camera-wrapper {
       position: relative;
-      margin: 0 18px 14px;
-      border-radius: 12px;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
       overflow: hidden;
-      background: #000;
-      aspect-ratio: 4/3;
+      margin-bottom: 20px;
+      border: 3px solid var(--blue);
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+      transition: all 0.4s ease;
     }
-    .cam-wrapper video {
-      width: 100%; height: 100%;
+
+    #cameraFeed {
+      width: 100%;
+      height: 100%;
       object-fit: cover;
-      transform: scaleX(-1);
-      display: block;
+      transform: scaleX(-1); /* Mirror effect */
     }
 
-    /* Face oval guide overlay */
-    .face-guide {
+    #scanLine {
       position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-    }
-    .face-oval {
-      width: 46%;
-      aspect-ratio: 3/4;
-      border: 2px solid rgba(0,255,136,0.6);
-      border-radius: 50%;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.35);
-      transition: border-color 0.3s;
-    }
-    .face-oval.checking { border-color: var(--orange); animation: pulse-oval 1s infinite; }
-    .face-oval.success { border-color: var(--green); box-shadow: 0 0 20px rgba(0,255,136,0.5), 0 0 0 9999px rgba(0,0,0,0.35); }
-    @keyframes pulse-oval { 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
-
-    /* Corner brackets */
-    .corner { position: absolute; width: 20px; height: 20px; }
-    .corner.tl { top: 10px; left: 10px; border-top: 2px solid var(--green); border-left: 2px solid var(--green); }
-    .corner.tr { top: 10px; right: 10px; border-top: 2px solid var(--green); border-right: 2px solid var(--green); }
-    .corner.bl { bottom: 10px; left: 10px; border-bottom: 2px solid var(--green); border-left: 2px solid var(--green); }
-    .corner.br { bottom: 10px; right: 10px; border-bottom: 2px solid var(--green); border-right: 2px solid var(--green); }
-
-    /* Scan line */
-    .scan-line {
-      position: absolute;
-      left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--green), transparent);
-      animation: scan 2.5s infinite linear;
-      opacity: 0;
-    }
-    .scan-line.active { opacity: 0.7; }
-    @keyframes scan { 0%{ top: 15%; } 50%{ top: 85%; } 100%{ top: 15%; } }
-
-    /* Instruction box */
-    .instruction-box {
-      margin: 0 18px 14px;
-      padding: 12px 16px;
-      background: rgba(255,170,0,0.08);
-      border: 1px solid rgba(255,170,0,0.25);
-      border-radius: 10px;
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-    }
-    .instruction-box .inst-icon { font-size: 1.4em; flex-shrink: 0; margin-top: 1px; }
-    .instruction-box .inst-text { font-size: 0.88em; color: var(--orange); font-weight: 600; line-height: 1.4; }
-    .instruction-box .inst-sub { font-size: 0.78em; color: var(--muted); font-weight: 400; margin-top: 2px; }
-    .instruction-box.success-box { background: rgba(0,255,136,0.08); border-color: rgba(0,255,136,0.25); }
-    .instruction-box.success-box .inst-text { color: var(--green); }
-
-    /* Captured thumbs */
-    .thumbs-row {
-      display: flex;
-      gap: 6px;
-      padding: 0 18px 14px;
-      flex-wrap: wrap;
-    }
-    .thumb-slot {
-      width: 48px; height: 48px;
-      border-radius: 6px;
-      border: 1px dashed #333;
-      background: #0d0d0d;
-      overflow: hidden;
-      position: relative;
-      transition: border-color 0.3s;
-    }
-    .thumb-slot.filled { border-color: var(--green); border-style: solid; }
-    .thumb-slot img { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
-    .thumb-slot .tick {
-      position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      background: rgba(0,255,136,0.3);
-      font-size: 1.1em;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: var(--blue);
+      box-shadow: 0 0 15px var(--blue);
       opacity: 0;
       transition: opacity 0.3s;
     }
-    .thumb-slot.filled .tick { opacity: 1; }
-    .thumb-count { font-size: 0.75em; color: var(--muted); padding: 0 18px 10px; }
-    .thumb-count span { color: var(--green); font-weight: 600; }
 
-    /* Capture button */
-    .btn-capture {
-      margin: 0 18px 18px;
-      width: calc(100% - 36px);
-      padding: 13px;
-      background: var(--orange);
-      color: #000;
-      border: none;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 0.95em;
-      font-family: 'Inter', sans-serif;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+    #scanLine.active {
+      opacity: 1;
+      animation: scanAnim 1.5s infinite alternate linear;
     }
-    .btn-capture:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,170,0,0.3); }
-    .btn-capture:disabled { background: #2a2a2a; color: #555; cursor: not-allowed; transform: none; box-shadow: none; }
-    .btn-capture.checking { background: rgba(255,170,0,0.2); color: var(--orange); border: 1px solid var(--orange); }
 
-    /* Submit */
-    .btn-submit {
+    @keyframes scanAnim {
+      0% { top: 0%; }
+      100% { top: 100%; }
+    }
+
+    /* Instruction Box */
+    .instruction-box {
+      background: var(--surface);
+      border: 1px solid var(--blue);
+      border-radius: 12px;
+      padding: 15px;
+      width: 100%;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .success-box {
+      border-color: var(--green);
+      background: var(--green-dim);
+    }
+
+    #instrIcon { font-size: 30px; margin-bottom: 5px; display: block; }
+    #instrText { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
+    #instrSub { font-size: 13px; color: var(--muted); }
+
+    /* Thumbnails */
+    .thumb-grid {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .thumb-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 1px solid var(--green);
+      opacity: 0;
+      animation: popIn 0.3s forwards;
+    }
+
+    @keyframes popIn {
+      to { opacity: 1; transform: scale(1); }
+      from { opacity: 0; transform: scale(0.5); }
+    }
+
+    /* Submit Button */
+    #btnSub {
       width: 100%;
       padding: 15px;
-      background: linear-gradient(135deg, #00ff88, #00cc6a);
+      background: var(--green);
       color: #000;
+      font-weight: bold;
+      font-size: 16px;
       border: none;
       border-radius: 10px;
-      font-weight: 700;
-      font-size: 1em;
-      font-family: 'Inter', sans-serif;
       cursor: pointer;
-      transition: all 0.2s;
-      margin-top: 8px;
+      margin-top: 20px;
+      opacity: 0.5;
+      transition: all 0.3s;
     }
-    .btn-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(0,255,136,0.35); }
-    .btn-submit:disabled { background: #1e1e1e; color: #444; cursor: not-allowed; transform: none; box-shadow: none; }
 
-    /* Error */
-    .error-msg { background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); color: var(--red); padding: 12px 16px; border-radius: 8px; font-size: 0.85em; margin-bottom: 16px; text-align: center; }
+    #btnSub:not(:disabled) {
+      opacity: 1;
+      box-shadow: 0 0 20px var(--green-dim);
+    }
 
-    /* Login link */
-    .login-link { text-align: center; margin-top: 20px; font-size: 0.85em; color: var(--muted); }
-    .login-link a { color: var(--green); text-decoration: none; font-weight: 600; }
+    #btnSub:not(:disabled):hover {
+      transform: translateY(-2px);
+    }
 
-    canvas { display: none; }
+    .alert {
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .alert-error { background: rgba(255, 68, 68, 0.1); color: var(--red); border: 1px solid var(--red); }
+    .alert-success { background: rgba(0, 255, 136, 0.1); color: var(--green); border: 1px solid var(--green); }
 
-    @media (max-width: 400px) {
-      .field-row { grid-template-columns: 1fr; }
-      .card { padding: 20px; }
+    @media(max-width: 768px) {
+      .kyc-container { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
-<div class="wrapper">
+  <div class="kyc-container">
+    <div class="form-section">
+      <h2>👤 Student Details</h2>
+      
+      {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+      {% endif %}
+      {% if message %}
+        <div class="alert alert-success">{{ message }}</div>
+      {% endif %}
 
-  <!-- Header -->
-  <div class="header">
-    <div class="badge">🔐 KYC-Grade Verification</div>
-    <h1>Student <span>Registration</span></h1>
-    <p>Your face is your ID. Complete all steps to register.</p>
-  </div>
+      <form method="POST" action="{{ url_for('student_signup') }}" id="signupForm">
+        <input type="hidden" name="face_samples" id="input_samples">
 
-  {% if error %}
-  <div class="error-msg">⚠️ {{ error }}</div>
-  {% endif %}
-
-  <form method="POST" enctype="multipart/form-data">
-
-    <!-- Personal Info -->
-    <div class="card">
-      <div class="card-title">📋 Personal Information</div>
-      <div class="field-row">
-        <div class="field">
+        <div class="form-group">
           <label>Full Name</label>
-          <input type="text" name="name" required placeholder="e.g. Abdul Kabeer">
+          <input type="text" name="name" required placeholder="e.g., Ajmal Khattak">
         </div>
-        <div class="field">
+        <div class="form-group">
           <label>Roll Number</label>
-          <input type="text" name="roll_no" required placeholder="e.g. 233706">
+          <input type="text" name="roll_no" required placeholder="e.g., CS-2026-001">
         </div>
-      </div>
-      <div class="field">
-        <label>Semester</label>
-        <select name="semester" required>
-          <option value="" disabled selected>Select your semester</option>
-          <option>1st Semester</option><option>2nd Semester</option>
-          <option>3rd Semester</option><option>4th Semester</option>
-          <option>5th Semester</option><option>6th Semester</option>
-          <option>7th Semester</option><option>8th Semester</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Email Address</label>
-        <input type="email" name="email" required placeholder="your@email.com">
-      </div>
-      <div class="field-row">
-        <div class="field">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" name="email" required placeholder="e.g., ajmal@example.com">
+        </div>
+        <div class="form-group">
+          <label>Semester</label>
+          <select name="semester">
+            <option value="1st Semester">1st Semester</option>
+            <option value="2nd Semester">2nd Semester</option>
+            <option value="3rd Semester">3rd Semester</option>
+            <option value="4th Semester">4th Semester</option>
+            <option value="5th Semester">5th Semester</option>
+            <option value="6th Semester" selected>6th Semester</option>
+            <option value="7th Semester">7th Semester</option>
+            <option value="8th Semester">8th Semester</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>Password</label>
-          <input type="password" name="password" required placeholder="Min. 6 characters">
+          <input type="password" name="password" required>
         </div>
-        <div class="field">
+        <div class="form-group">
           <label>Confirm Password</label>
-          <input type="password" name="confirm_password" required placeholder="Repeat password">
+          <input type="password" name="confirm_password" required>
         </div>
-      </div>
+
+        <button type="submit" id="btnSub" disabled>🔒 Complete Face KYC First</button>
+      </form>
     </div>
 
-    <!-- KYC Camera -->
-    <div class="kyc-section">
-
-      <div class="kyc-header">
-        <div class="kyc-icon">🪪</div>
-        <div>
-          <div class="kyc-title">Face Verification — 7 Steps</div>
-          <div class="kyc-sub">Follow each instruction carefully. We capture 15+ samples for accurate attendance.</div>
-        </div>
+    <div class="camera-section">
+      <h2>📷 Smart Face KYC</h2>
+      
+      <div class="camera-wrapper" id="faceOval">
+        <video id="cameraFeed" autoplay playsinline muted></video>
+        <canvas id="captureCanvas" style="display:none;"></canvas>
+        <div id="scanLine"></div>
       </div>
 
-      <!-- Step progress -->
-      <div class="step-track" id="stepTrack">
-        <!-- filled by JS -->
+      <div id="instrBox" class="instruction-box">
+        <span id="instrIcon">⏳</span>
+        <div id="instrText">Starting Camera...</div>
+        <div id="instrSub">Please allow camera permissions</div>
       </div>
 
-      <!-- Camera -->
-      <div class="cam-wrapper">
-        <video id="video" autoplay muted playsinline></video>
-        <div class="face-guide">
-          <div class="face-oval" id="faceOval"></div>
-        </div>
-        <div class="corner tl"></div>
-        <div class="corner tr"></div>
-        <div class="corner bl"></div>
-        <div class="corner br"></div>
-        <div class="scan-line" id="scanLine"></div>
-      </div>
-
-      <!-- Instruction -->
-      <div class="instruction-box" id="instrBox">
-        <div class="inst-icon" id="instrIcon">👁️</div>
-        <div>
-          <div class="inst-text" id="instrText">Loading camera...</div>
-          <div class="inst-sub" id="instrSub">Please allow camera access</div>
-        </div>
-      </div>
-
-      <!-- Captured thumbnails -->
-      <div class="thumbs-row" id="thumbsRow"></div>
-      <div class="thumb-count">Captured: <span id="captureCount">0</span> / 15 samples</div>
-
-      <!-- Capture button -->
-      <button type="button" class="btn-capture" id="btnCapture" onclick="captureStep()" disabled>
-        ⏳ Starting camera...
-      </button>
-
-      <!-- Hidden inputs -->
-      <canvas id="canvas"></canvas>
-      <input type="hidden" name="img_front"      id="input_front">
-      <input type="hidden" name="img_left"       id="input_left">
-      <input type="hidden" name="img_right"      id="input_right">
-      <input type="hidden" name="img_up"         id="input_up">
-      <input type="hidden" name="img_smile"      id="input_smile">
-      <input type="hidden" name="img_blink"      id="input_blink">
-      <input type="hidden" name="img_tilt"       id="input_tilt">
-      <input type="hidden" name="face_samples"   id="input_samples">
-
+      <div class="thumb-grid" id="thumbGrid"></div>
     </div>
-
-    <button type="submit" class="btn-submit" id="btnSubmit" disabled>
-      ⚠️ Complete face verification first
-    </button>
-
-  </form>
-
-  <div class="login-link">
-    Already registered? <a href="{{ url_for('student_login') }}">Sign in here</a>
   </div>
 
-</div>
+  <script>
+    const video = document.getElementById('cameraFeed');
+    const canvas = document.getElementById('captureCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    const instrIcon = document.getElementById('instrIcon');
+    const instrText = document.getElementById('instrText');
+    const instrSub = document.getElementById('instrSub');
+    const instrBox = document.getElementById('instrBox');
+    const scanLine = document.getElementById('scanLine');
+    const faceOval = document.getElementById('faceOval');
+    const thumbGrid = document.getElementById('thumbGrid');
+    const btnSub = document.getElementById('btnSub');
 
-<script>
-// =============================================
-// KYC STEP DEFINITIONS
-// =============================================
-const STEPS = [
-  { id: 'front',  icon: '😐', label: 'Look\nStraight', instruction: 'Look straight at the camera', sub: 'Keep your face centered in the oval — hold still', input: 'input_front',  samples: 3 },
-  { id: 'up',     icon: '⬆️', label: 'Look\nUp',      instruction: 'Slowly tilt your head UP',     sub: 'Hold for a moment so we capture it clearly',   input: 'input_up',     samples: 2 },
-  { id: 'left',   icon: '⬅️', label: 'Look\nLeft',    instruction: 'Turn your head to the LEFT',   sub: 'About 30° — not too far',                       input: 'input_left',   samples: 2 },
-  { id: 'right',  icon: '➡️', label: 'Look\nRight',   instruction: 'Turn your head to the RIGHT',  sub: 'About 30° — mirror of the previous step',       input: 'input_right',  samples: 2 },
-  { id: 'smile',  icon: '😊', label: 'Smile',          instruction: 'Give a natural smile 😊',       sub: 'This helps verify liveness and identity',       input: 'input_smile',  samples: 2 },
-  { id: 'blink',  icon: '👁️', label: 'Blink',          instruction: 'Blink your eyes slowly',       sub: 'Open → close → open again',                     input: 'input_blink',  samples: 2 },
-  { id: 'tilt',   icon: '↗️', label: 'Tilt\nHead',    instruction: 'Slightly tilt your head sideways', sub: 'Small tilt left or right — natural pose',   input: 'input_tilt',   samples: 2 },
-];
+    // KYC Steps
+    const STEPS = [
+      { icon: '👤', title: 'Look Straight', sub: 'Position your face clearly in the center' },
+      { icon: '⬆️', title: 'Look Slightly Up', sub: 'Tilt your head up just a bit' },
+      { icon: '⬇️', title: 'Look Slightly Down', sub: 'Tilt your head down a little' },
+      { icon: '⬅️', title: 'Look Left', sub: 'Turn your head slightly to the left' },
+      { icon: '➡️', title: 'Look Right', sub: 'Turn your head slightly to the right' },
+      { icon: '😊', title: 'Smile', sub: 'Give a natural smile for Liveness' },
+      { icon: '😐', title: 'Neutral Face', sub: 'Keep a relaxed, normal expression' }
+    ];
 
-const video    = document.getElementById('video');
-const canvas   = document.getElementById('canvas');
-const btnCap   = document.getElementById('btnCapture');
-const btnSub   = document.getElementById('btnSubmit');
-const instrBox = document.getElementById('instrBox');
-const instrIcon= document.getElementById('instrIcon');
-const instrText= document.getElementById('instrText');
-const instrSub = document.getElementById('instrSub');
-const faceOval = document.getElementById('faceOval');
-const scanLine = document.getElementById('scanLine');
-const thumbsRow= document.getElementById('thumbsRow');
-const countEl  = document.getElementById('captureCount');
+    let currentStep = 0;
+    let allSamples = [];
+    let stream = null;
+    let autoScanInterval = null;
+    let isScanning = false;
 
-let currentStep = 0;
-let allSamples  = [];   // store all base64 frames
-let thumbCount  = 0;
-
-// ---- Build step track ----
-function buildStepTrack() {
-  const track = document.getElementById('stepTrack');
-  STEPS.forEach((s, i) => {
-    const item = document.createElement('div');
-    item.className = 'step-item' + (i === 0 ? ' active' : '');
-    item.id = 'stepItem' + i;
-    item.innerHTML = `<div class="step-dot">${s.icon}</div><div class="step-label">${s.label}</div>`;
-    track.appendChild(item);
-  });
-}
-
-// ---- Build thumb slots ----
-function buildThumbs() {
-  let total = STEPS.reduce((a, s) => a + s.samples, 0);
-  for (let i = 0; i < total; i++) {
-    const slot = document.createElement('div');
-    slot.className = 'thumb-slot';
-    slot.id = 'thumb_' + i;
-    slot.innerHTML = `<img id="timg_${i}"><div class="tick">✓</div>`;
-    thumbsRow.appendChild(slot);
-  }
-}
-
-// ---- Update instruction UI ----
-function showInstruction(step) {
-  const s = STEPS[step];
-  instrIcon.textContent = s.icon;
-  instrText.textContent = `Step ${step+1} of ${STEPS.length}: ${s.instruction}`;
-  instrSub.textContent  = s.sub;
-  instrBox.className    = 'instruction-box';
-  faceOval.className    = 'face-oval';
-  btnCap.textContent    = `📸 Capture — ${s.label.replace('\n',' ')}`;
-  btnCap.className      = 'btn-capture';
-  btnCap.disabled       = false;
-
-  // update step track
-  STEPS.forEach((_, i) => {
-    const el = document.getElementById('stepItem' + i);
-    el.className = 'step-item' + (i < step ? ' done' : i === step ? ' active' : '');
-  });
-}
-
-// ---- Add a thumb ----
-function addThumb(dataURL) {
-  const slot  = document.getElementById('thumb_' + thumbCount);
-  const img   = document.getElementById('timg_' + thumbCount);
-  if (slot && img) {
-    img.src = dataURL;
-    slot.classList.add('filled');
-  }
-  thumbCount++;
-  countEl.textContent = thumbCount;
-}
-
-// =============================================
-// START CAMERA
-// =============================================
-buildStepTrack();
-buildThumbs();
-
-navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } })
-  .then(stream => {
-    video.srcObject = stream;
-    video.onloadedmetadata = () => {
-      showInstruction(0);
-      scanLine.classList.add('active');
-    };
-  })
-  .catch(err => {
-    instrText.textContent = '❌ Camera blocked! Please allow camera access.';
-    instrSub.textContent  = 'Check your browser permissions and reload.';
-    instrBox.style.background = 'rgba(255,68,68,0.08)';
-    instrBox.style.borderColor = 'rgba(255,68,68,0.3)';
-    instrText.style.color = 'var(--red)';
-  });
-
-// =============================================
-// CAPTURE STEP
-// =============================================
-async function captureStep() {
-  if (!video.videoWidth) return;
-
-  const s = STEPS[currentStep];
-  btnCap.disabled = true;
-  btnCap.className = 'btn-capture checking';
-  btnCap.textContent = '⏳ Checking face quality...';
-  faceOval.className = 'face-oval checking';
-
-  // Draw to canvas
-  const ctx = canvas.getContext('2d');
-  canvas.width  = video.videoWidth;
-  canvas.height = video.videoHeight;
-  ctx.drawImage(video, 0, 0);
-  const dataURL = canvas.toDataURL('image/jpeg', 0.85);
-
-  // Send to server for quality check
-  try {
-    const res = await fetch('/check_photo_quality', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: dataURL })
-    });
-    const result = await res.json();
-
-    if (!result.valid) {
-      faceOval.className = 'face-oval';
-      instrBox.style.background   = 'rgba(255,68,68,0.08)';
-      instrBox.style.borderColor  = 'rgba(255,68,68,0.25)';
-      instrText.style.color       = 'var(--red)';
-      instrText.textContent       = '❌ ' + result.error;
-      instrSub.textContent        = 'Adjust position and try again';
-      btnCap.disabled  = false;
-      btnCap.className = 'btn-capture';
-      btnCap.textContent = '📸 Try Again';
-
-      // reset instruction color after 2s
-      setTimeout(() => showInstruction(currentStep), 2000);
-      return;
+    // 1. Initialize Camera
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
+        video.srcObject = stream;
+        video.play();
+        showInstruction(currentStep);
+        
+        // Start the Auto-Capture Loop
+        startAutoScanner();
+      } catch (err) {
+        instrIcon.textContent = '❌';
+        instrText.textContent = 'Camera Error';
+        instrSub.textContent = 'Please allow camera access in your browser.';
+        instrBox.style.borderColor = 'var(--red)';
+        faceOval.style.borderColor = 'var(--red)';
+      }
     }
-  } catch (e) {
-    // If quality endpoint not available, proceed anyway
-    console.warn('Quality check unavailable, proceeding.');
-  }
 
-  // ✅ Good photo — capture multiple frames for this step
-  faceOval.className = 'face-oval success';
+    function showInstruction(index) {
+      instrIcon.textContent = STEPS[index].icon;
+      instrText.textContent = STEPS[index].title;
+      instrSub.textContent  = STEPS[index].sub;
+    }
 
-  // Save primary frame
-  document.getElementById(s.input).value = dataURL;
-  allSamples.push(dataURL);
-  addThumb(dataURL);
+    function addThumb(base64) {
+      const img = document.createElement('img');
+      img.src = base64;
+      img.className = 'thumb-img';
+      thumbGrid.appendChild(img);
+    }
 
-  // Capture extra frames with short delay for more samples
-  for (let i = 1; i < s.samples; i++) {
-    await delay(300);
-    ctx.drawImage(video, 0, 0);
-    const extra = canvas.toDataURL('image/jpeg', 0.85);
-    allSamples.push(extra);
-    addThumb(extra);
-  }
+    const delay = ms => new Promise(res => setTimeout(res, ms));
 
-  // Show success briefly
-  instrBox.className    = 'instruction-box success-box';
-  instrText.style.color = 'var(--green)';
-  instrText.textContent = `✅ Step ${currentStep+1} captured successfully!`;
-  instrSub.textContent  = currentStep + 1 < STEPS.length ? 'Get ready for the next step...' : 'All steps complete!';
+    // 2. Auto-Scanner Brain (Checks with Backend)
+    function startAutoScanner() {
+      scanLine.classList.add('active');
+      
+      autoScanInterval = setInterval(async () => {
+        // Skip if currently processing or finished
+        if (isScanning || currentStep >= STEPS.length) return;
+        isScanning = true;
 
-  await delay(900);
+        // Grab current frame
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const base64Image = canvas.toDataURL('image/jpeg', 0.8);
 
-  currentStep++;
+        try {
+          // Verify frame quality via Backend (YOLOv8 check)
+          const response = await fetch('/check_photo_quality', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64Image })
+          });
+          const result = await response.json();
 
-  if (currentStep < STEPS.length) {
-    // Next step
-    instrText.style.color = '';
-    instrBox.style.background = '';
-    instrBox.style.borderColor = '';
-    showInstruction(currentStep);
-  } else {
-    // ALL DONE
-    document.getElementById('input_samples').value = JSON.stringify(allSamples);
-    scanLine.classList.remove('active');
-    btnCap.style.display = 'none';
+          if (result.valid) {
+            // 🎉 Perfect Frame Detected!
+            faceOval.style.borderColor = 'var(--green)';
+            faceOval.style.boxShadow = '0 0 30px var(--green)';
+            await saveFrameAndNext(base64Image);
+          } else {
+            // ⚠️ Frame issue (blur, multi-face, etc.)
+            faceOval.style.borderColor = 'var(--red)';
+            faceOval.style.boxShadow = '0 0 20px rgba(255, 68, 68, 0.3)';
+            instrSub.textContent = `⚠️ ${result.error}`; 
+            instrSub.style.color = 'var(--red)';
+          }
+        } catch (err) {
+          console.log("Scanner error:", err);
+        }
 
-    // Mark all steps done
-    STEPS.forEach((_, i) => {
-      document.getElementById('stepItem' + i).className = 'step-item done';
-    });
+        isScanning = false;
+      }, 1500); // Check every 1.5 seconds
+    }
 
-    instrBox.className    = 'instruction-box success-box';
-    instrIcon.textContent = '🎉';
-    instrText.style.color = 'var(--green)';
-    instrText.textContent = 'Face verification complete! All 7 steps passed.';
-    instrSub.textContent  = `${allSamples.length} high-quality samples captured — ready to register.`;
+    // 3. Save and Move to Next Step
+    async function saveFrameAndNext(base64Image) {
+      isScanning = true; // Pause scanning
 
-    btnSub.disabled     = false;
-    btnSub.textContent  = '🎓 Complete Registration';
-    btnSub.style.boxShadow = '0 0 30px rgba(0,255,136,0.3)';
-  }
-}
+      allSamples.push(base64Image);
+      addThumb(base64Image);
 
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
-</script>
+      // Success UI Feedback
+      instrBox.className = 'instruction-box success-box';
+      instrText.style.color = 'var(--green)';
+      instrText.textContent = `✅ ${STEPS[currentStep].title} Captured!`;
+      instrSub.textContent = 'Perfect!';
+      instrSub.style.color = 'var(--text)';
 
+      // Camera Flash effect
+      video.style.opacity = '0.2';
+      setTimeout(() => video.style.opacity = '1', 150);
+
+      await delay(1200); // Let user see success message
+
+      currentStep++;
+
+      if (currentStep < STEPS.length) {
+        // Load next step
+        instrBox.className = 'instruction-box';
+        instrText.style.color = '';
+        faceOval.style.borderColor = 'var(--blue)';
+        faceOval.style.boxShadow = '0 0 20px var(--blue)';
+        showInstruction(currentStep);
+        isScanning = false; // Resume scanning
+      } else {
+        // 🏁 KYC Complete
+        clearInterval(autoScanInterval);
+        document.getElementById('input_samples').value = JSON.stringify(allSamples);
+        scanLine.classList.remove('active');
+        
+        if (stream) stream.getTracks().forEach(t => t.stop());
+
+        instrBox.className = 'instruction-box success-box';
+        instrIcon.textContent = '🎉';
+        instrText.style.color = 'var(--green)';
+        instrText.textContent = 'KYC Complete!';
+        instrSub.textContent  = 'All angles captured securely.';
+
+        video.style.display = 'none';
+        faceOval.style.background = 'url("https://cdn-icons-png.flaticon.com/512/190/190411.png") center/50% no-repeat var(--green-dim)';
+
+        btnSub.disabled = false;
+        btnSub.textContent = '🎓 Submit Registration';
+      }
+    }
+
+    window.addEventListener('load', startCamera);
+  </script>
 </body>
 </html>
