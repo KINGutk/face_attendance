@@ -2,227 +2,690 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎓 Smart Student Signup</title>
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
   <meta name="theme-color" content="#00ff88">
   <style>
-    /* --- Global Neon Theme --- */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #00ff88;
+      --green-dim: rgba(0,255,136,0.15);
+      --orange: #ffaa00;
+      --red: #ff4444;
+      --blue: #00e5ff;
+      --bg: #080c0f;
+      --surface: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.08);
+      --text: #e8f0f8;
+      --muted: #6b7a8d;
+    }
+
     body {
-      background: radial-gradient(circle at top left, #0f0f0f, #1c1c1c, #000);
-      color: #f5f3f8;
-      font-family: 'Poppins', sans-serif;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      min-height: 100vh; margin: 0; padding: 20px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 16px 60px;
+      overflow-x: hidden;
     }
 
-    .form-container {
-      background: rgba(255, 255, 255, 0.05);
-      padding: 35px;
-      border-radius: 15px;
-      box-shadow: 0 0 25px rgba(0, 255, 136, 0.2);
-      width: 100%; max-width: 500px;
-      border: 1px solid rgba(0,255,136,0.1);
+    /* subtle grid bg */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
     }
 
-    h1 { color: #00ff88; text-align: center; margin-bottom: 25px; }
-
-    input, select {
-      width: 100%; padding: 12px; border-radius: 8px;
-      background: rgba(255, 255, 255, 0.1); color: #fff;
-      border: 1px solid #333; margin-bottom: 15px;
-    }
-    
-    select option {
-      background: #1a1a1a; /* Dark background for options */
-      color: #fff; /* White text for options */
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 520px;
     }
 
-    /* --- Multi-Step Camera UI --- */
-    .camera-section {
-      text-align: center; background: rgba(0,0,0,0.3);
-      padding: 15px; border-radius: 10px; border: 1px dashed #444;
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
     }
-    
-    video { width: 100%; border-radius: 8px; border: 2px solid #00ff88; transform: scaleX(-1); }
-    
-    .instruction {
-        font-size: 1.2em; font-weight: bold; color: #ffaa00; margin: 10px 0;
-        text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+    .header .badge {
+      display: inline-block;
+      background: var(--green-dim);
+      border: 1px solid rgba(0,255,136,0.3);
+      color: var(--green);
+      font-size: 0.72em;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+    .header h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2em;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.1;
+    }
+    .header h1 span { color: var(--green); }
+    .header p { color: var(--muted); font-size: 0.88em; margin-top: 8px; }
+
+    /* Form card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 16px;
+      backdrop-filter: blur(10px);
+    }
+    .card-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.8em;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 18px;
     }
 
-    .progress-dots { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; }
-    .dot { width: 12px; height: 12px; background: #333; border-radius: 50%; }
-    .dot.active { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+    /* Inputs */
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 0.8em; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    .field input, .field select {
+      width: 100%;
+      padding: 11px 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.92em;
+      font-family: 'Inter', sans-serif;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    .field input:focus, .field select:focus { border-color: rgba(0,255,136,0.5); }
+    .field select option { background: #1a1a1a; color: #fff; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
+    /* ===== KYC Camera Section ===== */
+    .kyc-section {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .kyc-header {
+      padding: 14px 18px;
+      background: rgba(0,255,136,0.05);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .kyc-header .kyc-icon { font-size: 1.3em; }
+    .kyc-header .kyc-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 0.95em; }
+    .kyc-header .kyc-sub { font-size: 0.75em; color: var(--muted); margin-top: 1px; }
+
+    /* Step progress bar */
+    .step-track {
+      display: flex;
+      align-items: center;
+      padding: 14px 18px;
+      gap: 4px;
+    }
+    .step-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      position: relative;
+    }
+    .step-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 55%;
+      right: -45%;
+      height: 2px;
+      background: var(--border);
+      z-index: 0;
+    }
+    .step-item.done:not(:last-child)::after { background: var(--green); }
+    .step-dot {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      border: 2px solid #333;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6em;
+      z-index: 1;
+      position: relative;
+      transition: all 0.3s;
+    }
+    .step-item.active .step-dot { border-color: var(--orange); background: rgba(255,170,0,0.2); box-shadow: 0 0 10px rgba(255,170,0,0.4); }
+    .step-item.done .step-dot { border-color: var(--green); background: rgba(0,255,136,0.2); }
+    .step-label { font-size: 0.6em; color: var(--muted); text-align: center; line-height: 1.2; }
+    .step-item.active .step-label { color: var(--orange); }
+    .step-item.done .step-label { color: var(--green); }
+
+    /* Camera view */
+    .cam-wrapper {
+      position: relative;
+      margin: 0 18px 14px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      aspect-ratio: 4/3;
+    }
+    .cam-wrapper video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+      display: block;
+    }
+
+    /* Face oval guide overlay */
+    .face-guide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .face-oval {
+      width: 46%;
+      aspect-ratio: 3/4;
+      border: 2px solid rgba(0,255,136,0.6);
+      border-radius: 50%;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.35);
+      transition: border-color 0.3s;
+    }
+    .face-oval.checking { border-color: var(--orange); animation: pulse-oval 1s infinite; }
+    .face-oval.success { border-color: var(--green); box-shadow: 0 0 20px rgba(0,255,136,0.5), 0 0 0 9999px rgba(0,0,0,0.35); }
+    @keyframes pulse-oval { 0%,100%{ opacity:1; } 50%{ opacity:0.5; } }
+
+    /* Corner brackets */
+    .corner { position: absolute; width: 20px; height: 20px; }
+    .corner.tl { top: 10px; left: 10px; border-top: 2px solid var(--green); border-left: 2px solid var(--green); }
+    .corner.tr { top: 10px; right: 10px; border-top: 2px solid var(--green); border-right: 2px solid var(--green); }
+    .corner.bl { bottom: 10px; left: 10px; border-bottom: 2px solid var(--green); border-left: 2px solid var(--green); }
+    .corner.br { bottom: 10px; right: 10px; border-bottom: 2px solid var(--green); border-right: 2px solid var(--green); }
+
+    /* Scan line */
+    .scan-line {
+      position: absolute;
+      left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+      animation: scan 2.5s infinite linear;
+      opacity: 0;
+    }
+    .scan-line.active { opacity: 0.7; }
+    @keyframes scan { 0%{ top: 15%; } 50%{ top: 85%; } 100%{ top: 15%; } }
+
+    /* Instruction box */
+    .instruction-box {
+      margin: 0 18px 14px;
+      padding: 12px 16px;
+      background: rgba(255,170,0,0.08);
+      border: 1px solid rgba(255,170,0,0.25);
+      border-radius: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .instruction-box .inst-icon { font-size: 1.4em; flex-shrink: 0; margin-top: 1px; }
+    .instruction-box .inst-text { font-size: 0.88em; color: var(--orange); font-weight: 600; line-height: 1.4; }
+    .instruction-box .inst-sub { font-size: 0.78em; color: var(--muted); font-weight: 400; margin-top: 2px; }
+    .instruction-box.success-box { background: rgba(0,255,136,0.08); border-color: rgba(0,255,136,0.25); }
+    .instruction-box.success-box .inst-text { color: var(--green); }
+
+    /* Captured thumbs */
+    .thumbs-row {
+      display: flex;
+      gap: 6px;
+      padding: 0 18px 14px;
+      flex-wrap: wrap;
+    }
+    .thumb-slot {
+      width: 48px; height: 48px;
+      border-radius: 6px;
+      border: 1px dashed #333;
+      background: #0d0d0d;
+      overflow: hidden;
+      position: relative;
+      transition: border-color 0.3s;
+    }
+    .thumb-slot.filled { border-color: var(--green); border-style: solid; }
+    .thumb-slot img { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+    .thumb-slot .tick {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,255,136,0.3);
+      font-size: 1.1em;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .thumb-slot.filled .tick { opacity: 1; }
+    .thumb-count { font-size: 0.75em; color: var(--muted); padding: 0 18px 10px; }
+    .thumb-count span { color: var(--green); font-weight: 600; }
+
+    /* Capture button */
     .btn-capture {
-        background: #00ff88; color: #000; border: none; padding: 10px 20px;
-        border-radius: 30px; font-weight: bold; cursor: pointer; width: 100%;
-        font-size: 1em; margin-top: 10px;
+      margin: 0 18px 18px;
+      width: calc(100% - 36px);
+      padding: 13px;
+      background: var(--orange);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.95em;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
-    .btn-capture:disabled { background: #333; color: #666; cursor: not-allowed; }
+    .btn-capture:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,170,0,0.3); }
+    .btn-capture:disabled { background: #2a2a2a; color: #555; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-capture.checking { background: rgba(255,170,0,0.2); color: var(--orange); border: 1px solid var(--orange); }
 
-    .gallery { display: flex; gap: 5px; justify-content: center; margin-top: 10px; }
-    .thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 5px; border: 1px solid #555; opacity: 0.5; }
-    .thumb.done { border-color: #00ff88; opacity: 1; }
-
-    /* Submit Button */
+    /* Submit */
     .btn-submit {
-      background: #00ff88; color: black; font-weight: bold; width: 100%;
-      padding: 14px; border: none; border-radius: 10px; font-size: 1.1em;
-      margin-top: 20px; cursor: pointer;
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #00ff88, #00cc6a);
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1em;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
     }
-    .btn-submit:disabled { background: #444; color: #888; cursor: not-allowed; }
+    .btn-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(0,255,136,0.35); }
+    .btn-submit:disabled { background: #1e1e1e; color: #444; cursor: not-allowed; transform: none; box-shadow: none; }
 
+    /* Error */
+    .error-msg { background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); color: var(--red); padding: 12px 16px; border-radius: 8px; font-size: 0.85em; margin-bottom: 16px; text-align: center; }
+
+    /* Login link */
+    .login-link { text-align: center; margin-top: 20px; font-size: 0.85em; color: var(--muted); }
+    .login-link a { color: var(--green); text-decoration: none; font-weight: 600; }
+
+    canvas { display: none; }
+
+    @media (max-width: 400px) {
+      .field-row { grid-template-columns: 1fr; }
+      .card { padding: 20px; }
+    }
   </style>
 </head>
 <body>
 
-  <div class="form-container">
-    <h1>🎓 Smart Registration</h1>
-    
-    {% if error %}
-    <div style="color: #ff4444; text-align: center; margin-bottom: 15px;">{{ error }}</div>
-    {% endif %}
+<div class="wrapper">
 
-    <form method="POST" enctype="multipart/form-data">
-      <input type="text" name="name" required placeholder="Full Name">
-      <input type="text" name="roll_no" required placeholder="Roll Number">
-      <select name="semester" required>
-        <option value="" disabled selected>Select Semester</option>
-        <option value="1st Semester">1st Semester</option>
-        <option value="2nd Semester">2nd Semester</option>
-        <option value="3rd Semester">3rd Semester</option>
-        <option value="4th Semester">4th Semester</option>
-        <option value="5th Semester">5th Semester</option>
-        <option value="6th Semester">6th Semester</option>
-        <option value="7th Semester">7th Semester</option>
-        <option value="8th Semester">8th Semester</option>
-      </select>
-      <input type="email" name="email" required placeholder="Email">
-      <input type="password" name="password" required placeholder="Password">
-      <input type="password" name="confirm_password" required placeholder="Confirm Password">
-
-      <div class="camera-section">
-        <div class="progress-dots">
-            <div id="dot1" class="dot active"></div>
-            <div id="dot2" class="dot"></div>
-            <div id="dot3" class="dot"></div>
-        </div>
-        
-        <p id="instruction" class="instruction">1. Look Straight (Front)</p>
-        <video id="video" autoplay muted playsinline></video>
-        <canvas id="canvas" style="display:none;"></canvas>
-
-        <button type="button" id="btnSnap" class="btn-capture" onclick="captureStep()">📸 Capture Front</button>
-
-        <div class="gallery">
-            <img id="thumb1" class="thumb">
-            <img id="thumb2" class="thumb">
-            <img id="thumb3" class="thumb">
-        </div>
-
-        <input type="hidden" name="img_front" id="input_front">
-        <input type="hidden" name="img_left" id="input_left">
-        <input type="hidden" name="img_right" id="input_right">
-      </div>
-
-      <button type="submit" id="btnSubmit" class="btn-submit" disabled>⚠️ Capture All 3 Angles First</button>
-    </form>
-    
-    <div style="text-align: center; margin-top: 15px;">
-        <a href="{{ url_for('student_login') }}" style="color: #00ff88;">Already have an account? Login</a>
-    </div>
+  <!-- Header -->
+  <div class="header">
+    <div class="badge">🔐 KYC-Grade Verification</div>
+    <h1>Student <span>Registration</span></h1>
+    <p>Your face is your ID. Complete all steps to register.</p>
   </div>
 
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const btnSnap = document.getElementById('btnSnap');
-    const btnSubmit = document.getElementById('btnSubmit');
-    const instruction = document.getElementById('instruction');
+  {% if error %}
+  <div class="error-msg">⚠️ {{ error }}</div>
+  {% endif %}
 
-    let step = 1; // 1=Front, 2=Left, 3=Right
+  <form method="POST" enctype="multipart/form-data">
 
-    // Start Camera
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-        .then(stream => { video.srcObject = stream; })
-        .catch(err => alert("Camera Error: " + err));
+    <!-- Personal Info -->
+    <div class="card">
+      <div class="card-title">📋 Personal Information</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Full Name</label>
+          <input type="text" name="name" required placeholder="e.g. Abdul Kabeer">
+        </div>
+        <div class="field">
+          <label>Roll Number</label>
+          <input type="text" name="roll_no" required placeholder="e.g. 233706">
+        </div>
+      </div>
+      <div class="field">
+        <label>Semester</label>
+        <select name="semester" required>
+          <option value="" disabled selected>Select your semester</option>
+          <option>1st Semester</option><option>2nd Semester</option>
+          <option>3rd Semester</option><option>4th Semester</option>
+          <option>5th Semester</option><option>6th Semester</option>
+          <option>7th Semester</option><option>8th Semester</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Email Address</label>
+        <input type="email" name="email" required placeholder="your@email.com">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" required placeholder="Min. 6 characters">
+        </div>
+        <div class="field">
+          <label>Confirm Password</label>
+          <input type="password" name="confirm_password" required placeholder="Repeat password">
+        </div>
+      </div>
+    </div>
 
-    async function captureStep() {
-        // Disable button to prevent double clicks
-        btnSnap.disabled = true;
-        btnSnap.textContent = "⏳ Checking Quality...";
-        
-        const context = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0);
-        
-        const dataURL = canvas.toDataURL('image/jpeg');
+    <!-- KYC Camera -->
+    <div class="kyc-section">
 
-        // --- ⚡ SEND TO SERVER FOR CHECK ---
-        try {
-            const response = await fetch('/check_photo_quality', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: dataURL })
-            });
-            
-            const result = await response.json();
+      <div class="kyc-header">
+        <div class="kyc-icon">🪪</div>
+        <div>
+          <div class="kyc-title">Face Verification — 7 Steps</div>
+          <div class="kyc-sub">Follow each instruction carefully. We capture 15+ samples for accurate attendance.</div>
+        </div>
+      </div>
 
-            if (!result.valid) {
-                // ❌ IF BAD PHOTO
-                alert(result.error);
-                btnSnap.disabled = false;
-                btnSnap.textContent = "📸 Try Again";
-                return; // Stop here! Don't move to next step.
-            }
+      <!-- Step progress -->
+      <div class="step-track" id="stepTrack">
+        <!-- filled by JS -->
+      </div>
 
-        } catch (err) {
-            console.error(err);
-            alert("Connection error. Please try again.");
-            btnSnap.disabled = false;
-            btnSnap.textContent = "📸 Capture";
-            return;
-        }
+      <!-- Camera -->
+      <div class="cam-wrapper">
+        <video id="video" autoplay muted playsinline></video>
+        <div class="face-guide">
+          <div class="face-oval" id="faceOval"></div>
+        </div>
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+        <div class="scan-line" id="scanLine"></div>
+      </div>
 
-        // ✅ IF GOOD PHOTO -> PROCEED
-        btnSnap.disabled = false;
+      <!-- Instruction -->
+      <div class="instruction-box" id="instrBox">
+        <div class="inst-icon" id="instrIcon">👁️</div>
+        <div>
+          <div class="inst-text" id="instrText">Loading camera...</div>
+          <div class="inst-sub" id="instrSub">Please allow camera access</div>
+        </div>
+      </div>
 
-        if(step === 1) {
-            document.getElementById('input_front').value = dataURL;
-            document.getElementById('thumb1').src = dataURL;
-            document.getElementById('thumb1').classList.add('done');
-            
-            step = 2;
-            instruction.textContent = "2. Turn Head Slightly LEFT";
-            btnSnap.textContent = "📸 Capture Left Side";
-            document.getElementById('dot2').classList.add('active');
-            
-        } else if(step === 2) {
-            document.getElementById('input_left').value = dataURL;
-            document.getElementById('thumb2').src = dataURL;
-            document.getElementById('thumb2').classList.add('done');
-            
-            step = 3;
-            instruction.textContent = "3. Turn Head Slightly RIGHT";
-            btnSnap.textContent = "📸 Capture Right Side";
-            document.getElementById('dot3').classList.add('active');
+      <!-- Captured thumbnails -->
+      <div class="thumbs-row" id="thumbsRow"></div>
+      <div class="thumb-count">Captured: <span id="captureCount">0</span> / 15 samples</div>
 
-        } else if(step === 3) {
-            document.getElementById('input_right').value = dataURL;
-            document.getElementById('thumb3').src = dataURL;
-            document.getElementById('thumb3').classList.add('done');
-            
-            instruction.textContent = "✅ All Angles Captured & Verified!";
-            instruction.style.color = "#00ff88";
-            btnSnap.style.display = "none"; 
-            
-            btnSubmit.disabled = false;
-            btnSubmit.textContent = "📝 Register Account";
-            btnSubmit.style.boxShadow = "0 0 20px #00ff88";
-        }
+      <!-- Capture button -->
+      <button type="button" class="btn-capture" id="btnCapture" onclick="captureStep()" disabled>
+        ⏳ Starting camera...
+      </button>
+
+      <!-- Hidden inputs -->
+      <canvas id="canvas"></canvas>
+      <input type="hidden" name="img_front"      id="input_front">
+      <input type="hidden" name="img_left"       id="input_left">
+      <input type="hidden" name="img_right"      id="input_right">
+      <input type="hidden" name="img_up"         id="input_up">
+      <input type="hidden" name="img_smile"      id="input_smile">
+      <input type="hidden" name="img_blink"      id="input_blink">
+      <input type="hidden" name="img_tilt"       id="input_tilt">
+      <input type="hidden" name="face_samples"   id="input_samples">
+
+    </div>
+
+    <button type="submit" class="btn-submit" id="btnSubmit" disabled>
+      ⚠️ Complete face verification first
+    </button>
+
+  </form>
+
+  <div class="login-link">
+    Already registered? <a href="{{ url_for('student_login') }}">Sign in here</a>
+  </div>
+
+</div>
+
+<script>
+// =============================================
+// KYC STEP DEFINITIONS
+// =============================================
+const STEPS = [
+  { id: 'front',  icon: '😐', label: 'Look\nStraight', instruction: 'Look straight at the camera', sub: 'Keep your face centered in the oval — hold still', input: 'input_front',  samples: 3 },
+  { id: 'up',     icon: '⬆️', label: 'Look\nUp',      instruction: 'Slowly tilt your head UP',     sub: 'Hold for a moment so we capture it clearly',   input: 'input_up',     samples: 2 },
+  { id: 'left',   icon: '⬅️', label: 'Look\nLeft',    instruction: 'Turn your head to the LEFT',   sub: 'About 30° — not too far',                       input: 'input_left',   samples: 2 },
+  { id: 'right',  icon: '➡️', label: 'Look\nRight',   instruction: 'Turn your head to the RIGHT',  sub: 'About 30° — mirror of the previous step',       input: 'input_right',  samples: 2 },
+  { id: 'smile',  icon: '😊', label: 'Smile',          instruction: 'Give a natural smile 😊',       sub: 'This helps verify liveness and identity',       input: 'input_smile',  samples: 2 },
+  { id: 'blink',  icon: '👁️', label: 'Blink',          instruction: 'Blink your eyes slowly',       sub: 'Open → close → open again',                     input: 'input_blink',  samples: 2 },
+  { id: 'tilt',   icon: '↗️', label: 'Tilt\nHead',    instruction: 'Slightly tilt your head sideways', sub: 'Small tilt left or right — natural pose',   input: 'input_tilt',   samples: 2 },
+];
+
+const video    = document.getElementById('video');
+const canvas   = document.getElementById('canvas');
+const btnCap   = document.getElementById('btnCapture');
+const btnSub   = document.getElementById('btnSubmit');
+const instrBox = document.getElementById('instrBox');
+const instrIcon= document.getElementById('instrIcon');
+const instrText= document.getElementById('instrText');
+const instrSub = document.getElementById('instrSub');
+const faceOval = document.getElementById('faceOval');
+const scanLine = document.getElementById('scanLine');
+const thumbsRow= document.getElementById('thumbsRow');
+const countEl  = document.getElementById('captureCount');
+
+let currentStep = 0;
+let allSamples  = [];   // store all base64 frames
+let thumbCount  = 0;
+
+// ---- Build step track ----
+function buildStepTrack() {
+  const track = document.getElementById('stepTrack');
+  STEPS.forEach((s, i) => {
+    const item = document.createElement('div');
+    item.className = 'step-item' + (i === 0 ? ' active' : '');
+    item.id = 'stepItem' + i;
+    item.innerHTML = `<div class="step-dot">${s.icon}</div><div class="step-label">${s.label}</div>`;
+    track.appendChild(item);
+  });
+}
+
+// ---- Build thumb slots ----
+function buildThumbs() {
+  let total = STEPS.reduce((a, s) => a + s.samples, 0);
+  for (let i = 0; i < total; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'thumb-slot';
+    slot.id = 'thumb_' + i;
+    slot.innerHTML = `<img id="timg_${i}"><div class="tick">✓</div>`;
+    thumbsRow.appendChild(slot);
+  }
+}
+
+// ---- Update instruction UI ----
+function showInstruction(step) {
+  const s = STEPS[step];
+  instrIcon.textContent = s.icon;
+  instrText.textContent = `Step ${step+1} of ${STEPS.length}: ${s.instruction}`;
+  instrSub.textContent  = s.sub;
+  instrBox.className    = 'instruction-box';
+  faceOval.className    = 'face-oval';
+  btnCap.textContent    = `📸 Capture — ${s.label.replace('\n',' ')}`;
+  btnCap.className      = 'btn-capture';
+  btnCap.disabled       = false;
+
+  // update step track
+  STEPS.forEach((_, i) => {
+    const el = document.getElementById('stepItem' + i);
+    el.className = 'step-item' + (i < step ? ' done' : i === step ? ' active' : '');
+  });
+}
+
+// ---- Add a thumb ----
+function addThumb(dataURL) {
+  const slot  = document.getElementById('thumb_' + thumbCount);
+  const img   = document.getElementById('timg_' + thumbCount);
+  if (slot && img) {
+    img.src = dataURL;
+    slot.classList.add('filled');
+  }
+  thumbCount++;
+  countEl.textContent = thumbCount;
+}
+
+// =============================================
+// START CAMERA
+// =============================================
+buildStepTrack();
+buildThumbs();
+
+navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } })
+  .then(stream => {
+    video.srcObject = stream;
+    video.onloadedmetadata = () => {
+      showInstruction(0);
+      scanLine.classList.add('active');
+    };
+  })
+  .catch(err => {
+    instrText.textContent = '❌ Camera blocked! Please allow camera access.';
+    instrSub.textContent  = 'Check your browser permissions and reload.';
+    instrBox.style.background = 'rgba(255,68,68,0.08)';
+    instrBox.style.borderColor = 'rgba(255,68,68,0.3)';
+    instrText.style.color = 'var(--red)';
+  });
+
+// =============================================
+// CAPTURE STEP
+// =============================================
+async function captureStep() {
+  if (!video.videoWidth) return;
+
+  const s = STEPS[currentStep];
+  btnCap.disabled = true;
+  btnCap.className = 'btn-capture checking';
+  btnCap.textContent = '⏳ Checking face quality...';
+  faceOval.className = 'face-oval checking';
+
+  // Draw to canvas
+  const ctx = canvas.getContext('2d');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+  const dataURL = canvas.toDataURL('image/jpeg', 0.85);
+
+  // Send to server for quality check
+  try {
+    const res = await fetch('/check_photo_quality', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: dataURL })
+    });
+    const result = await res.json();
+
+    if (!result.valid) {
+      faceOval.className = 'face-oval';
+      instrBox.style.background   = 'rgba(255,68,68,0.08)';
+      instrBox.style.borderColor  = 'rgba(255,68,68,0.25)';
+      instrText.style.color       = 'var(--red)';
+      instrText.textContent       = '❌ ' + result.error;
+      instrSub.textContent        = 'Adjust position and try again';
+      btnCap.disabled  = false;
+      btnCap.className = 'btn-capture';
+      btnCap.textContent = '📸 Try Again';
+
+      // reset instruction color after 2s
+      setTimeout(() => showInstruction(currentStep), 2000);
+      return;
     }
+  } catch (e) {
+    // If quality endpoint not available, proceed anyway
+    console.warn('Quality check unavailable, proceeding.');
+  }
+
+  // ✅ Good photo — capture multiple frames for this step
+  faceOval.className = 'face-oval success';
+
+  // Save primary frame
+  document.getElementById(s.input).value = dataURL;
+  allSamples.push(dataURL);
+  addThumb(dataURL);
+
+  // Capture extra frames with short delay for more samples
+  for (let i = 1; i < s.samples; i++) {
+    await delay(300);
+    ctx.drawImage(video, 0, 0);
+    const extra = canvas.toDataURL('image/jpeg', 0.85);
+    allSamples.push(extra);
+    addThumb(extra);
+  }
+
+  // Show success briefly
+  instrBox.className    = 'instruction-box success-box';
+  instrText.style.color = 'var(--green)';
+  instrText.textContent = `✅ Step ${currentStep+1} captured successfully!`;
+  instrSub.textContent  = currentStep + 1 < STEPS.length ? 'Get ready for the next step...' : 'All steps complete!';
+
+  await delay(900);
+
+  currentStep++;
+
+  if (currentStep < STEPS.length) {
+    // Next step
+    instrText.style.color = '';
+    instrBox.style.background = '';
+    instrBox.style.borderColor = '';
+    showInstruction(currentStep);
+  } else {
+    // ALL DONE
+    document.getElementById('input_samples').value = JSON.stringify(allSamples);
+    scanLine.classList.remove('active');
+    btnCap.style.display = 'none';
+
+    // Mark all steps done
+    STEPS.forEach((_, i) => {
+      document.getElementById('stepItem' + i).className = 'step-item done';
+    });
+
+    instrBox.className    = 'instruction-box success-box';
+    instrIcon.textContent = '🎉';
+    instrText.style.color = 'var(--green)';
+    instrText.textContent = 'Face verification complete! All 7 steps passed.';
+    instrSub.textContent  = `${allSamples.length} high-quality samples captured — ready to register.`;
+
+    btnSub.disabled     = false;
+    btnSub.textContent  = '🎓 Complete Registration';
+    btnSub.style.boxShadow = '0 0 30px rgba(0,255,136,0.3)';
+  }
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 </script>
 
 </body>

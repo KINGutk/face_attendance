@@ -3,230 +3,505 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🎥 Live Face Scanner</title>
+  <title>📡 Live Attendance Scanner</title>
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
   <meta name="theme-color" content="#00ff88">
   <style>
-    /* --- Global Neon Theme --- */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #00ff88;
+      --green-dim: rgba(0,255,136,0.15);
+      --orange: #ffaa00;
+      --red: #ff4444;
+      --blue: #00e5ff;
+      --bg: #080c0f;
+      --surface: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.08);
+      --text: #e8f0f8;
+      --muted: #6b7a8d;
+    }
+
     body {
-      background: radial-gradient(circle at center, #1a1a1a, #000);
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px 60px;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,255,136,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none; z-index: 0;
+    }
+
+    .wrapper { position: relative; z-index: 1; width: 100%; max-width: 580px; }
+
+    /* Header */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .top-bar h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.4em;
+      font-weight: 700;
       color: #fff;
-      font-family: 'Poppins', sans-serif;
-      display: flex; flex-direction: column; align-items: center; 
-      /* 🟢 FIX 1: Allow content to flow naturally from top */
-      justify-content: flex-start; 
-      min-height: 100vh; margin: 0; padding: 20px;
-      /* 🟢 FIX 2: Enable scrolling */
-      overflow-y: auto; 
     }
-
-    h1 {
-      color: #00ff88;
-      text-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
-      margin-bottom: 10px;
-      margin-top: 10px;
-      font-size: 1.8em;
-      text-align: center;
+    .top-bar h1 span { color: var(--green); }
+    .live-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,68,68,0.1);
+      border: 1px solid rgba(255,68,68,0.3);
+      padding: 5px 12px; border-radius: 20px;
+      font-size: 0.75em; font-weight: 600; color: #ff6666;
     }
+    .live-dot { width: 6px; height: 6px; background: var(--red); border-radius: 50%; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{ opacity:1; } 50%{ opacity:0.2; } }
 
-    /* Class Info Badge */
-    .class-info {
-        background: rgba(0, 255, 136, 0.1);
-        border: 1px solid #00ff88;
-        color: #00ff88;
-        padding: 8px 20px;
-        border-radius: 20px;
-        font-weight: bold;
-        margin-bottom: 20px;
-        box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
-        font-size: 1.1em;
-        text-align: center;
+    /* Class info */
+    .class-card {
+      background: var(--green-dim);
+      border: 1px solid rgba(0,255,136,0.2);
+      border-radius: 12px;
+      padding: 12px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
+    .class-card .cc-icon { font-size: 1.4em; }
+    .class-card .cc-text { font-size: 0.9em; font-weight: 600; color: var(--green); }
+    .class-card .cc-sub { font-size: 0.75em; color: var(--muted); margin-top: 2px; }
 
-    /* --- Camera Container --- */
-    .scanner-container {
+    /* Camera */
+    .cam-container {
       position: relative;
-      width: 100%;
-      max-width: 600px;
-      border-radius: 20px;
-      padding: 5px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 2px solid rgba(0, 255, 136, 0.3);
-      box-shadow: 0 0 40px rgba(0, 255, 136, 0.1);
-      /* Ensure it doesn't take up full height on small screens */
-      aspect-ratio: 4/3; 
-      display: flex; align-items: center; justify-content: center;
+      border-radius: 16px;
       overflow: hidden;
+      background: #000;
+      border: 2px solid rgba(0,255,136,0.2);
+      aspect-ratio: 4/3;
+      margin-bottom: 16px;
+      box-shadow: 0 0 40px rgba(0,255,136,0.05);
     }
 
-    /* The Video Feed */
     video {
-      width: 100%;
-      height: 100%;
+      width: 100%; height: 100%;
       object-fit: cover;
-      border-radius: 15px;
-      transform: scaleX(-1); /* Mirror effect */
+      transform: scaleX(-1);
+      display: block;
     }
 
-    /* --- Scanning Animation (Laser Line) --- */
-    .scan-line {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: #00ff88;
-      box-shadow: 0 0 15px #00ff88;
-      animation: scan 3s infinite linear;
-      opacity: 0.7;
-      z-index: 10;
+    /* Face tracking overlay */
+    .face-overlay {
+      position: absolute; inset: 0;
       pointer-events: none;
     }
 
-    @keyframes scan {
-      0% { top: 10%; }
-      50% { top: 90%; }
-      100% { top: 10%; }
+    /* Animated oval */
+    .face-oval-wrap {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
     }
+    .face-oval {
+      width: 42%;
+      aspect-ratio: 3/4;
+      border: 2px solid rgba(0,255,136,0.4);
+      border-radius: 50%;
+      transition: all 0.4s;
+      box-shadow: inset 0 0 20px rgba(0,255,136,0.05);
+    }
+    .face-oval.scanning { border-color: var(--orange); animation: pulse-oval 1s infinite; }
+    .face-oval.matched  { border-color: var(--green);  box-shadow: 0 0 25px rgba(0,255,136,0.4), inset 0 0 20px rgba(0,255,136,0.1); }
+    .face-oval.unknown  { border-color: var(--red); }
+    @keyframes pulse-oval { 0%,100%{ transform: scale(1); } 50%{ transform: scale(1.03); } }
 
-    /* --- Status Badge --- */
-    .status-badge {
-      margin-top: 25px;
-      padding: 15px 30px;
-      border-radius: 50px;
-      font-size: 1.2em;
-      font-weight: bold;
-      text-align: center;
-      background: #111;
-      border: 1px solid #333;
-      color: #888;
-      width: 90%; max-width: 400px;
-      transition: all 0.3s ease;
+    /* Scan line */
+    .scan-line {
+      position: absolute; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+      animation: scan 2.5s infinite ease-in-out;
+      opacity: 0.6;
     }
+    @keyframes scan { 0%{ top:10%; } 50%{ top:88%; } 100%{ top:10%; } }
 
-    .status-badge.active-green {
-      background: rgba(0, 255, 136, 0.2);
-      color: #00ff88;
-      border-color: #00ff88;
-      box-shadow: 0 0 25px rgba(0, 255, 136, 0.4);
-    }
+    /* Corner brackets */
+    .c { position: absolute; width: 22px; height: 22px; }
+    .c.tl { top:12px; left:12px; border-top:2px solid var(--green); border-left:2px solid var(--green); border-radius:3px 0 0 0; }
+    .c.tr { top:12px; right:12px; border-top:2px solid var(--green); border-right:2px solid var(--green); border-radius:0 3px 0 0; }
+    .c.bl { bottom:12px; left:12px; border-bottom:2px solid var(--green); border-left:2px solid var(--green); border-radius:0 0 0 3px; }
+    .c.br { bottom:12px; right:12px; border-bottom:2px solid var(--green); border-right:2px solid var(--green); border-radius:0 0 3px 0; }
 
-    .status-badge.active-red {
-      background: rgba(255, 68, 68, 0.2);
-      color: #ff4444;
-      border-color: #ff4444;
-      box-shadow: 0 0 25px rgba(255, 68, 68, 0.4);
-    }
-    
-    .status-badge.active-cyan {
-      background: rgba(0, 229, 255, 0.2);
-      color: cyan;
-      border-color: cyan;
-      box-shadow: 0 0 25px rgba(0, 229, 255, 0.4);
-    }
-
-    .status-badge.active-orange {
-      background: rgba(255, 165, 0, 0.2);
-      color: orange;
-      border-color: orange;
-      box-shadow: 0 0 25px rgba(255, 165, 0, 0.4);
-    }
-
-    /* --- Back Button --- */
-    .btn-back {
-      margin-top: 30px;
-      margin-bottom: 20px; /* 🟢 FIX 3: Extra bottom space */
-      background: transparent;
-      color: #aaa;
-      border: 1px solid #444;
-      padding: 12px 30px;
+    /* Liveness challenge overlay */
+    .liveness-challenge {
+      position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,170,0,0.4);
       border-radius: 30px;
-      text-decoration: none;
-      font-size: 0.9em;
-      transition: 0.3s;
+      padding: 8px 18px;
+      font-size: 0.8em;
+      font-weight: 600;
+      color: var(--orange);
+      white-space: nowrap;
+      display: none;
     }
-    .btn-back:hover {
-      border-color: #fff;
-      color: #fff;
-      background: rgba(255,255,255,0.05);
+    .liveness-challenge.active { display: block; animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from{ opacity:0; transform:translateX(-50%) translateY(10px); } to{ opacity:1; transform:translateX(-50%) translateY(0); } }
+
+    /* Status */
+    .status-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: all 0.3s;
     }
+    .status-icon { font-size: 1.8em; flex-shrink: 0; }
+    .status-text { font-weight: 600; font-size: 0.95em; }
+    .status-sub  { font-size: 0.78em; color: var(--muted); margin-top: 3px; }
+
+    .status-card.green  { background: rgba(0,255,136,0.07); border-color: rgba(0,255,136,0.25); }
+    .status-card.green .status-text  { color: var(--green); }
+    .status-card.red    { background: rgba(255,68,68,0.07);  border-color: rgba(255,68,68,0.25); }
+    .status-card.red .status-text    { color: var(--red); }
+    .status-card.orange { background: rgba(255,170,0,0.07); border-color: rgba(255,170,0,0.25); }
+    .status-card.orange .status-text { color: var(--orange); }
+    .status-card.blue   { background: rgba(0,229,255,0.07); border-color: rgba(0,229,255,0.25); }
+    .status-card.blue .status-text   { color: var(--blue); }
+
+    /* Liveness steps row */
+    .liveness-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .liveness-chip {
+      flex: 1;
+      min-width: 70px;
+      padding: 8px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      text-align: center;
+      font-size: 0.7em;
+      color: var(--muted);
+      transition: all 0.3s;
+    }
+    .liveness-chip .lc-icon { font-size: 1.3em; display: block; margin-bottom: 3px; }
+    .liveness-chip.active { border-color: rgba(255,170,0,0.4); background: rgba(255,170,0,0.08); color: var(--orange); }
+    .liveness-chip.done   { border-color: rgba(0,255,136,0.4); background: rgba(0,255,136,0.08); color: var(--green); }
+
+    /* Recent log */
+    .log-section { margin-bottom: 16px; }
+    .log-title {
+      font-size: 0.72em; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+    }
+    .log-entry {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px; margin-bottom: 6px;
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn { from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:translateY(0); } }
+    .log-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--green-dim); border: 1px solid rgba(0,255,136,0.3);
+      display: flex; align-items: center; justify-content: center; font-size: 0.9em;
+      flex-shrink: 0;
+    }
+    .log-name  { font-size: 0.85em; font-weight: 600; }
+    .log-time  { font-size: 0.72em; color: var(--muted); }
+    .log-badge { margin-left: auto; padding: 3px 10px; border-radius: 20px; font-size: 0.7em; font-weight: 600; }
+    .log-badge.present { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+    .log-badge.unknown { background: rgba(255,68,68,0.15); color: var(--red); border: 1px solid rgba(255,68,68,0.3); }
+
+    /* Back button */
+    .btn-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: transparent; color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 10px 22px; border-radius: 30px;
+      text-decoration: none; font-size: 0.85em;
+      transition: 0.2s; margin-top: 10px;
+    }
+    .btn-back:hover { border-color: #fff; color: #fff; background: rgba(255,255,255,0.05); }
 
     canvas { display: none; }
   </style>
 </head>
 <body>
 
-  <h1>📡 Live Attendance Scanner</h1>
+<div class="wrapper">
 
-  <div id="class-display" class="class-info">⌛ Connecting...</div>
-
-  <div class="scanner-container">
-    <div class="scan-line"></div>
-    <video id="video" autoplay playsinline></video>
+  <!-- Top bar -->
+  <div class="top-bar">
+    <h1>📡 Live <span>Scanner</span></h1>
+    <div class="live-badge"><div class="live-dot"></div> LIVE</div>
   </div>
 
-  <div id="status" class="status-badge">🔍 Waiting for camera...</div>
+  <!-- Class info -->
+  <div class="class-card">
+    <div class="cc-icon">📚</div>
+    <div>
+      <div class="cc-text" id="classDisplay">⌛ Connecting to session...</div>
+      <div class="cc-sub" id="classSub">Waiting for active class</div>
+    </div>
+  </div>
+
+  <!-- Camera -->
+  <div class="cam-container">
+    <video id="video" autoplay playsinline></video>
+    <div class="face-overlay">
+      <div class="scan-line"></div>
+      <div class="face-oval-wrap">
+        <div class="face-oval scanning" id="faceOval"></div>
+      </div>
+      <div class="c tl"></div><div class="c tr"></div>
+      <div class="c bl"></div><div class="c br"></div>
+    </div>
+    <div class="liveness-challenge" id="livenessChallenge">👁️ Please blink your eyes</div>
+  </div>
+
+  <!-- Liveness chips -->
+  <div class="liveness-row" id="livenessRow">
+    <div class="liveness-chip" id="lc_face"><span class="lc-icon">🎯</span>Face Found</div>
+    <div class="liveness-chip" id="lc_live"><span class="lc-icon">✅</span>Liveness</div>
+    <div class="liveness-chip" id="lc_match"><span class="lc-icon">🪪</span>ID Match</div>
+    <div class="liveness-chip" id="lc_conf"><span class="lc-icon">📊</span>Confidence</div>
+  </div>
+
+  <!-- Status -->
+  <div class="status-card" id="statusCard">
+    <div class="status-icon" id="statusIcon">🔍</div>
+    <div>
+      <div class="status-text" id="statusText">Waiting for camera...</div>
+      <div class="status-sub" id="statusSub">Please allow camera access</div>
+    </div>
+  </div>
+
+  <!-- Recent log -->
+  <div class="log-section">
+    <div class="log-title">📋 Recent Attendance</div>
+    <div id="logList"></div>
+    <div id="logEmpty" style="font-size:0.8em;color:var(--muted);text-align:center;padding:10px;">No attendance marked yet</div>
+  </div>
 
   <a href="{{ url_for('professor_dashboard' if session.get('role') == 'professor' else 'index') }}" class="btn-back">⬅ Back to Dashboard</a>
 
-  <canvas id="canvas"></canvas>
+</div>
 
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const statusDiv = document.getElementById('status');
-    const classDiv = document.getElementById('class-display');
+<canvas id="canvas"></canvas>
 
-    // 1. Start Camera
-    navigator.mediaDevices.getUserMedia({ 
-        video: { 
-            facingMode: "user",
-            width: { ideal: 640 },
-            height: { ideal: 480 }
-        } 
-    })
-    .then(stream => { 
-        video.srcObject = stream; 
-        statusDiv.innerText = "🔍 Scanning...";
-    })
-    .catch(err => { 
-        console.error("Camera error:", err);
-        statusDiv.innerText = "❌ Camera Blocked! Check Permissions.";
-        statusDiv.classList.add("active-red");
-    });
+<script>
+const video       = document.getElementById('video');
+const canvas      = document.getElementById('canvas');
+const statusCard  = document.getElementById('statusCard');
+const statusIcon  = document.getElementById('statusIcon');
+const statusText  = document.getElementById('statusText');
+const statusSub   = document.getElementById('statusSub');
+const faceOval    = document.getElementById('faceOval');
+const classDisp   = document.getElementById('classDisplay');
+const classSub    = document.getElementById('classSub');
+const logList     = document.getElementById('logList');
+const logEmpty    = document.getElementById('logEmpty');
+const livenessChallenge = document.getElementById('livenessChallenge');
 
-    // 2. Loop: Capture Frame & Send to Python
-    setInterval(() => {
-        if (!video.videoWidth) return; 
+// Liveness challenge rotation
+const CHALLENGES = [
+  { text: '👁️ Blink your eyes slowly', key: 'blink' },
+  { text: '😊 Give a smile', key: 'smile' },
+  { text: '⬆️ Slowly look up', key: 'up' },
+  { text: '⬅️ Turn head slightly left', key: 'left' },
+];
+let challengeIdx = 0;
+let lastMarked = {};   // prevent duplicate log entries
+let isScanning = false;
 
-        const context = canvas.getContext('2d');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        const dataURL = canvas.toDataURL('image/jpeg', 0.6); // 0.6 quality for speed
+// ---- Chip helpers ----
+function chipActive(id) {
+  document.getElementById('lc_' + id).className = 'liveness-chip active';
+}
+function chipDone(id) {
+  document.getElementById('lc_' + id).className = 'liveness-chip done';
+}
+function chipReset(id) {
+  document.getElementById('lc_' + id).className = 'liveness-chip';
+}
+function resetChips() {
+  ['face','live','match','conf'].forEach(chipReset);
+}
 
-        fetch('/process_frame', {
-            method: 'POST',
-            body: JSON.stringify({ image: dataURL }),
-            headers: { 'Content-Type': 'application/json' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Update Status Text & Color
-            statusDiv.innerText = data.message;
-            statusDiv.classList.remove("active-green", "active-red", "active-cyan", "active-orange");
+// ---- Status helpers ----
+function setStatus(icon, text, sub, color) {
+  statusIcon.textContent = icon;
+  statusText.textContent = text;
+  statusSub.textContent  = sub || '';
+  statusCard.className   = 'status-card ' + (color || '');
+}
 
-            if(data.color === "#00ff88" || data.color === "green") statusDiv.classList.add("active-green");
-            else if (data.color === "cyan") statusDiv.classList.add("active-cyan");
-            else if (data.color === "red") statusDiv.classList.add("active-red");
-            else if (data.color === "orange" || data.color === "yellow") statusDiv.classList.add("active-orange");
+// ---- Log entry ----
+function addLog(name, roll, status) {
+  const key = name + roll;
+  if (lastMarked[key] && Date.now() - lastMarked[key] < 30000) return; // debounce 30s
+  lastMarked[key] = Date.now();
 
-            // Update Class Info
-            classDiv.innerText = "📚 " + data.current_class;
-        })
-        .catch(err => console.log("Backend busy..."));
+  logEmpty.style.display = 'none';
+  const now = new Date().toLocaleTimeString();
+  const div = document.createElement('div');
+  div.className = 'log-entry';
+  div.innerHTML = `
+    <div class="log-avatar">👤</div>
+    <div>
+      <div class="log-name">${name}</div>
+      <div class="log-time">${roll} &nbsp;·&nbsp; ${now}</div>
+    </div>
+    <div class="log-badge ${status === 'Present' ? 'present' : 'unknown'}">${status}</div>`;
+  logList.prepend(div);
 
-    }, 2000); // Check every 2 seconds
-  </script>
+  // keep max 5 entries visible
+  const entries = logList.querySelectorAll('.log-entry');
+  if (entries.length > 5) entries[entries.length-1].remove();
+}
+
+// ---- Show liveness challenge ----
+function rotateLivenessChallenge() {
+  const c = CHALLENGES[challengeIdx % CHALLENGES.length];
+  livenessChallenge.textContent = c.text;
+  livenessChallenge.classList.add('active');
+  challengeIdx++;
+}
+
+// =============================================
+// CAMERA START
+// =============================================
+navigator.mediaDevices.getUserMedia({
+  video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+})
+.then(stream => {
+  video.srcObject = stream;
+  setStatus('🔍', 'Scanning...', 'Position your face inside the oval', 'orange');
+  startScanLoop();
+})
+.catch(err => {
+  setStatus('❌', 'Camera blocked!', 'Allow camera access in your browser settings', 'red');
+  faceOval.className = 'face-oval unknown';
+});
+
+// =============================================
+// SCAN LOOP — every 2.5 seconds
+// =============================================
+function startScanLoop() {
+  setInterval(async () => {
+    if (isScanning || !video.videoWidth) return;
+    isScanning = true;
+
+    // Rotate liveness challenge every scan
+    rotateLivenessChallenge();
+
+    // Capture frame
+    const ctx = canvas.getContext('2d');
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    const dataURL = canvas.toDataURL('image/jpeg', 0.7);
+
+    // Update UI — scanning
+    chipActive('face');
+    faceOval.className = 'face-oval scanning';
+    setStatus('🔍', 'Scanning face...', 'Hold still inside the oval', 'orange');
+
+    try {
+      const res  = await fetch('/process_frame', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataURL, liveness_challenge: CHALLENGES[(challengeIdx-1) % CHALLENGES.length].key })
+      });
+      const data = await res.json();
+
+      // Parse response from backend
+      const msg   = data.message || '';
+      const color = data.color   || '';
+      const cls   = data.current_class || 'No active class';
+
+      // Update class info
+      classDisp.textContent = '📚 ' + cls;
+      classSub.textContent  = new Date().toLocaleTimeString();
+
+      // Determine state from backend response
+      if (color === '#00ff88' || color === 'green' || msg.includes('Marked') || msg.includes('Present')) {
+        // ✅ MATCH
+        chipDone('face'); chipDone('live'); chipDone('match'); chipDone('conf');
+        faceOval.className = 'face-oval matched';
+        livenessChallenge.classList.remove('active');
+        setStatus('✅', msg, 'Attendance marked successfully', 'green');
+
+        // Extract name from message for log
+        const nameMatch = msg.match(/✅ (.+?) marked/);
+        const name = nameMatch ? nameMatch[1] : 'Student';
+        addLog(name, '', 'Present');
+
+        setTimeout(resetChips, 3000);
+
+      } else if (msg.includes('Unknown') || msg.includes('not recognized') || color === 'red') {
+        chipDone('face'); chipDone('live'); chipReset('match'); chipReset('conf');
+        faceOval.className = 'face-oval unknown';
+        setStatus('❓', 'Face not recognized', 'Not in the student database', 'red');
+        setTimeout(resetChips, 2000);
+
+      } else if (msg.includes('No face') || msg.includes('no face')) {
+        resetChips();
+        faceOval.className = 'face-oval scanning';
+        setStatus('👁️', 'No face detected', 'Center your face inside the oval', 'orange');
+        livenessChallenge.classList.remove('active');
+
+      } else if (msg.includes('already') || msg.includes('Already')) {
+        chipDone('face'); chipDone('live'); chipDone('match');
+        faceOval.className = 'face-oval matched';
+        setStatus('✔️', msg, 'Attendance was already recorded', 'blue');
+        setTimeout(resetChips, 2000);
+
+      } else if (color === 'cyan' || color === 'blue') {
+        chipActive('face');
+        setStatus('⏳', msg, 'Please wait...', 'blue');
+
+      } else {
+        chipActive('face');
+        faceOval.className = 'face-oval scanning';
+        setStatus('🔍', msg, 'Scanning...', 'orange');
+      }
+
+    } catch (err) {
+      setStatus('⚠️', 'Connection issue', 'Retrying...', '');
+      resetChips();
+    }
+
+    isScanning = false;
+  }, 2500);
+}
+</script>
 
 </body>
 </html>
