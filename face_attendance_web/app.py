@@ -67,7 +67,20 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 # 🧠 AI MODEL LOADING (YOLOv8 + ResNet50)
 # ==================================================
 print("🔄 Loading YOLOv8 and ResNet50 models...")
-yolo_model = YOLO('yolov8n-face.pt')  # auto-downloads on first run
+import urllib.request
+import os
+
+MODEL_PATH = 'yolov8n-face.pt'
+if not os.path.exists(MODEL_PATH):
+    print("📥 Downloading specialized YOLOv8 Face model from GitHub...")
+    try:
+        url = "https://github.com/akanametov/yolo-face/releases/download/v0.0.0/yolov8n-face.pt"
+        urllib.request.urlretrieve(url, MODEL_PATH)
+        print("✅ YOLOv8 Face model downloaded successfully!")
+    except Exception as e:
+        print(f"❌ Failed to download model: {e}")
+
+yolo_model = YOLO(MODEL_PATH)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 embedding_model = resnet50(pretrained=True)
@@ -86,7 +99,6 @@ known_encodings = []
 known_names = []
 known_rolls = []
 ENCODINGS_CACHE = os.path.join(FACES_DIR, 'encodings_cache.pkl')
-
 # ==================================================
 # 📧 EMAIL CONFIGURATION
 # ==================================================
