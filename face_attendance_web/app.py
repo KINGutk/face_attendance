@@ -519,6 +519,59 @@ def delete_student(student_id):
     load_known_faces()
     return redirect(url_for('manage_students'))
 
+# --- [ ADD THIS BELOW THE ALREADY EXISTING ROUTES IN YOUR APP.PY ] ---
+
+@app.route('/professor_login', methods=['GET', 'POST'])
+def professor_login():
+    if session.get('role') == 'professor': return redirect(url_for('professor_dashboard'))
+    if request.method == 'POST':
+        db = get_db_connection()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM professors WHERE email=%s", (request.form['email'],))
+        prof = cursor.fetchone()
+        db.close()
+        if prof and (check_password_hash(prof['password'], request.form['password']) or prof['password'] == request.form['password']):
+            if prof['status'] == 'approved':
+                session.update({'logged_in': True, 'role': 'professor', 'user_id': prof['id'], 'name': prof['name']})
+                return redirect(url_for('professor_dashboard'))
+            return render_template('professor_login.html', error="Account pending approval.")
+        return render_template('professor_login.html', error="Invalid credentials.")
+    return render_template('professor_login.html')
+
+@app.route('/professor_dashboard')
+@professor_required
+def professor_dashboard():
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT name, email FROM professors WHERE id=%s", (session['user_id'],))
+    prof = cursor.fetchone()
+    db.close()
+    return render_template('professor_dashboard.html', professor=prof)
+
+@app.route('/manage_classes', methods=['GET', 'POST'])
+@admin_required
+def manage_classes():
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    if request.method == 'POST':
+        cursor.execute("INSERT INTO classes (subject_name, professor_id, semester, day_of_week, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)", 
+                      (request.form['subject_name'], request.form['professor_id'], request.form['semester'], request.form['day_of_week'], request.form['start_time'], request.form['end_time']))
+        db.commit()
+    cursor.execute("SELECT c.*, p.name as professor_name FROM classes c LEFT JOIN professors p ON c.professor_id=p.id")
+    classes = cursor.fetchall()
+    db.close()
+    return render_template('manage_classes.html', classes=classes)
+
+@app.route('/manual_attendance')
+def manual_attendance():
+    if session.get('role') not in ['admin', 'professor']: return redirect(url_for('login'))
+    db = get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM classes")
+    classes = cursor.fetchall()
+    db.close()
+    return render_template('manual_attendance.html', classes=classes)
+
 # ==================================================
 # 🚀 ATE-EXIT & RUN
 # ==================================================
