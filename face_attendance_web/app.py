@@ -59,22 +59,14 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB for face images
 print("🔄 Loading YOLOv8 and ResNet50 models...")
 
 MODEL_PATH = 'yolov8n-face.pt'
-if not os.path.exists(MODEL_PATH):
-    print("📥 Downloading specialized YOLOv8 Face model from Mirror...")
-    urls = [
-        "https://github.com/SannketNikam/Face-Detection/raw/main/yolov8n-face.pt",
-        "https://huggingface.co/junjiang/GestureFace/resolve/main/yolov8n-face.pt"
-    ]
-    for url in urls:
-        try:
-            print(f"🔗 Trying: {url}")
-            urllib.request.urlretrieve(url, MODEL_PATH)
-            print("✅ YOLOv8 downloaded!")
-            break
-        except Exception:
-            pass
-
-yolo_model = YOLO(MODEL_PATH)
+try:
+    yolo_model = YOLO(MODEL_PATH)
+except Exception as e:
+    print("⚠️ Model corrupted. Redownloading safe version...")
+    if os.path.exists(MODEL_PATH):
+        os.remove(MODEL_PATH)
+    urllib.request.urlretrieve("https://huggingface.co/junjiang/GestureFace/resolve/main/yolov8n-face.pt", MODEL_PATH)
+    yolo_model = YOLO(MODEL_PATH)
 
 # PyTorch ResNet50 for 512D Face Maps
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -479,7 +471,12 @@ def process_frame():
     db = None
     cursor = None
     try:
+        # ⚠️ DB EMPTY FIX: Agar dusre worker ki memory khali ho, to foran load karo
+        if not KNOWN_ENCODINGS:
+            load_known_faces()
+
         data = request.json
+
         image_data = data.get('image')
         if not image_data:
             return jsonify({"message": "No Image", "color": "red", "current_class": "--"})
@@ -629,8 +626,10 @@ def mark_absentees_job():
 
     try:
         cursor = db.cursor(dictionary=True)
-        now = datetime.now()
+        # ⚠️ TIMEZONE FIX: Hamesha Pakistan (PKT) time use karega
+        now = datetime.utcnow() + timedelta(hours=5)
         date_today = now.date()
+
         current_time = now.strftime("%H:%M:%S")
         day_name = now.strftime("%A")
 
@@ -847,14 +846,15 @@ def dashboard_stats():
         student_count = cursor.fetchone()
         total_students = student_count['total'] if student_count else 0
 
-        # 2. Present Today
-        today = datetime.now().date()
+       # 2. Present Today
+        now_pkt = datetime.utcnow() + timedelta(hours=5)
+        today = now_pkt.date()
         cursor.execute("SELECT COUNT(DISTINCT student_id) AS present_today FROM attendance WHERE date = %s AND status = 'Present'", (today,))
         present_result = cursor.fetchone()
         present_today = present_result['present_today'] if present_result else 0
 
         # 3. Upcoming Class (Smart Weekly Wrapping Logic)
-        now = datetime.now()
+        now = now_pkt
         current_time = now.time()
         current_day = now.strftime("%A")
 
