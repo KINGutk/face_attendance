@@ -490,11 +490,10 @@ def process_frame():
         if not db:
             return jsonify({"message": "DB connection error", "color": "red", "current_class": "--"})
         cursor = db.cursor(dictionary=True)
-        now = datetime.now()
-        date_today = now.date()
-        time_now = now.strftime("%H:%M:%S")
-        day_name = now.strftime("%A")
-
+now = datetime.utcnow() + timedelta(hours=5)  # PKT fix
+date_today = now.date()
+time_now = now.strftime("%H:%M:%S")
+day_name = now.strftime("%A")
         cursor.execute(
             "SELECT * FROM classes WHERE day_of_week=%s AND start_time<=%s AND end_time>=%s LIMIT 1",
             (day_name, time_now, time_now)
@@ -526,7 +525,7 @@ def process_frame():
         best_idx = int(np.argmax(sims))
         best_sim = sims[best_idx]
 
-        THRESHOLD = 0.72  # Strict accuracy threshold
+       THRESHOLD = 0.55  # ResNet50 is not a face model, needs lower threshold
         if best_sim < THRESHOLD:
             update_detection("Unknown", "Unknown", class_info, "unknown", "⚠️ Unknown Face Detected!")
             return jsonify({"message": "Unknown Face", "color": "red", "current_class": class_info})
