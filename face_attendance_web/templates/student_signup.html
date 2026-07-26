@@ -217,7 +217,7 @@
       <div class="kyc-header">
         <div class="kyc-icon">🪪</div>
         <div>
-          <div class="kyc-title">Smart Face KYC — 6 Angles</div>
+          <div class="kyc-title">Smart Face KYC — 3 Angles</div>
           <div class="kyc-sub">The system will automatically capture your photos.</div>
         </div>
       </div>
@@ -248,7 +248,7 @@
       </div>
 
       <div class="thumbs-row" id="thumbsRow" style="display: none;"></div>
-      <div class="thumb-count" id="thumbCountDiv" style="display: none;">Captured: <span id="captureCount">0</span> / 6 samples</div>
+      <div class="thumb-count" id="thumbCountDiv" style="display: none;">Captured: <span id="captureCount">0</span> / 3 samples</div>
 
       <canvas id="canvas"></canvas>
       <input type="hidden" name="img_front" id="input_front">
@@ -277,10 +277,7 @@
 const STEPS = [
   { id: 'front',  icon: '👤', label: 'Straight', instruction: 'Look Straight', sub: 'Position your face inside the oval', targetInput: 'input_front' },
   { id: 'left',   icon: '⬅️', label: 'Left',     instruction: 'Look Left',     sub: 'Turn your head slightly left', targetInput: 'input_left' },
-  { id: 'right',  icon: '➡️', label: 'Right',    instruction: 'Look Right',    sub: 'Turn your head slightly right', targetInput: 'input_right' },
-  { id: 'up',     icon: '⬆️', label: 'Up',       instruction: 'Look Up',       sub: 'Tilt your head up just a bit', targetInput: null },
-  { id: 'down',   icon: '⬇️', label: 'Down',     instruction: 'Look Down',     sub: 'Tilt your head down a little', targetInput: null },
-  { id: 'smile',  icon: '😊', label: 'Smile',    instruction: 'Smile',         sub: 'Give a natural smile', targetInput: null }
+  { id: 'right',  icon: '➡️', label: 'Right',    instruction: 'Look Right',    sub: 'Turn your head slightly right', targetInput: 'input_right' }
 ];
 
 const video = document.getElementById('video');
@@ -470,7 +467,7 @@ async function saveFrameAndNext(base64Image) {
     instrBox.className = 'instruction-box success-box';
     instrIcon.textContent = '🎉';
     instrText.textContent = 'Verification Complete!';
-    instrSub.textContent  = 'All 6 angles captured securely.';
+    instrSub.textContent  = 'All 3 angles captured securely.';
 
     camWrapper.style.display = 'none';
 

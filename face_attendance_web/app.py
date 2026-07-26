@@ -25,12 +25,10 @@ if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
         pass
 
 # ==================================================
-# 🤖 ADVANCED AI IMPORTS (YOLOv8 + PyTorch)
+# 🤖 ADVANCED AI IMPORTS (YOLOv8 + ArcFace)
 # ==================================================
 from ultralytics import YOLO
-import torch
-import torchvision.transforms as transforms
-from torchvision.models import resnet50
+import onnxruntime as ort
 
 # ==================================================
 # 🌍 LOAD ENVIRONMENT VARIABLES
@@ -51,12 +49,12 @@ except ImportError:
 # ==================================================
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'super_secure_authentic_key_2026')
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB for face images
+app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB for 6x face images
 
 # ==================================================
-# 🧠 AI MODEL LOADING (YOLOv8 + ResNet50)
+# 🧠 AI MODEL LOADING (YOLOv8 + ArcFace)
 # ==================================================
-print("🔄 Loading YOLOv8 and ResNet50 models...")
+print("🔄 Loading YOLOv8 and ArcFace models...")
 
 MODEL_PATH = 'yolov8n-face.pt'
 try:
@@ -68,28 +66,30 @@ except Exception as e:
     urllib.request.urlretrieve("https://huggingface.co/junjiang/GestureFace/resolve/main/yolov8n-face.pt", MODEL_PATH)
     yolo_model = YOLO(MODEL_PATH)
 
-# PyTorch ResNet50 for 512D Face Maps
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-embedding_model = resnet50(weights='DEFAULT')
-embedding_model.fc = torch.nn.Linear(2048, 512)
-embedding_model = embedding_model.to(device)
-embedding_model.eval()
+# ArcFace (InsightFace w600k_r50) for 512D Face Embeddings via ONNX Runtime
+ARCFACE_MODEL_PATH = os.path.expanduser("~/.insightface/models/buffalo_l/w600k_r50.onnx")
+if not os.path.exists(ARCFACE_MODEL_PATH):
+    print("⚠️ ArcFace model not found. Downloading via insightface...")
+    from insightface.app import FaceAnalysis
+    _tmp = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+    del _tmp
 
-face_transform = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-])
+arcface_session = ort.InferenceSession(ARCFACE_MODEL_PATH, providers=['CPUExecutionProvider'])
+arcface_input_name = arcface_session.get_inputs()[0].name
+print("ArcFace loaded (512D, 99.8% accuracy)")
 
 
 def get_face_embedding(img_bgr):
-    """Generates a 512-dimensional math map of the face using PyTorch"""
+    """Generates a 512-dimensional face embedding using ArcFace (ONNX Runtime)."""
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-    tensor = face_transform(img_rgb).unsqueeze(0).to(device)
-    with torch.no_grad():
-        emb = embedding_model(tensor)
-    return torch.nn.functional.normalize(emb, dim=1).squeeze().cpu().numpy()
+    img_resized = cv2.resize(img_rgb, (112, 112))
+    img_norm = (img_resized.astype(np.float32) - 127.5) / 127.5
+    img_chw = np.transpose(img_norm, (2, 0, 1))  # HWC -> CHW
+    img_batch = np.expand_dims(img_chw, axis=0)   # Add batch dim
+    result = arcface_session.run(None, {arcface_input_name: img_batch})
+    embedding = result[0][0]
+    embedding = embedding / (np.linalg.norm(embedding) + 1e-8)  # L2 normalize
+    return embedding
 
 
 def cosine_similarity(a, b):
@@ -490,10 +490,10 @@ def process_frame():
         if not db:
             return jsonify({"message": "DB connection error", "color": "red", "current_class": "--"})
         cursor = db.cursor(dictionary=True)
-now = datetime.utcnow() + timedelta(hours=5)  # PKT fix
-date_today = now.date()
-time_now = now.strftime("%H:%M:%S")
-day_name = now.strftime("%A")
+        now = datetime.utcnow() + timedelta(hours=5)  # PKT fix
+        date_today = now.date()
+        time_now = now.strftime("%H:%M:%S")
+        day_name = now.strftime("%A")
         cursor.execute(
             "SELECT * FROM classes WHERE day_of_week=%s AND start_time<=%s AND end_time>=%s LIMIT 1",
             (day_name, time_now, time_now)
@@ -525,7 +525,7 @@ day_name = now.strftime("%A")
         best_idx = int(np.argmax(sims))
         best_sim = sims[best_idx]
 
-       THRESHOLD = 0.55  # ResNet50 is not a face model, needs lower threshold
+        THRESHOLD = 0.68  # ArcFace: dedicated face model, high-accuracy threshold
         if best_sim < THRESHOLD:
             update_detection("Unknown", "Unknown", class_info, "unknown", "⚠️ Unknown Face Detected!")
             return jsonify({"message": "Unknown Face", "color": "red", "current_class": class_info})
@@ -755,7 +755,7 @@ def student_signup():
             # Identity sanity check between angles (lenient - just catches totally different faces)
             sim_left = cosine_similarity(embeddings["FRONT"], embeddings["LEFT"])
             sim_right = cosine_similarity(embeddings["FRONT"], embeddings["RIGHT"])
-            if sim_left < 0.3 or sim_right < 0.3:
+            if sim_left < 0.2 or sim_right < 0.2:
                 return render_template('student_signup.html', error="⚠️ The 3 photos don't seem to match the same person. Please retake all 3 angles.")
 
             student_encodings = [
@@ -773,6 +773,22 @@ def student_signup():
             cursor.execute("SELECT id FROM students WHERE roll_no = %s", (roll_no,))
             if cursor.fetchone():
                 return render_template('student_signup.html', error="Roll Number already exists!")
+
+            cursor.execute("SELECT id FROM students WHERE email = %s", (email,))
+            if cursor.fetchone():
+                return render_template('student_signup.html', error="Email Address is already registered!")
+
+            # Prevent duplicate face registrations (checks BOTH approved and pending)
+            cursor.execute("SELECT name, face_data FROM students WHERE face_data IS NOT NULL")
+            for st in cursor.fetchall():
+                try:
+                    st_encs = json.loads(st['face_data'])
+                    if len(st_encs) > 0:
+                        sim = cosine_similarity(embeddings["FRONT"], np.array(st_encs[0]))
+                        if sim >= 0.68:
+                            return render_template('student_signup.html', error=f"⚠️ Face match error: This face is already registered to {st['name']}!")
+                except Exception:
+                    pass
 
             hashed_pw = generate_password_hash(password)
 
