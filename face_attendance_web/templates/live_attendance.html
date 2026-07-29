@@ -239,18 +239,35 @@
     .log-badge.unknown { background: rgba(255,68,68,0.15); color: var(--red); border: 1px solid rgba(255,68,68,0.3); }
 
     /* Back button */
-    .btn-back {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: transparent; color: var(--muted);
-      border: 1px solid var(--border);
-      padding: 10px 22px; border-radius: 30px;
-      text-decoration: none; font-size: 0.85em;
-      transition: 0.2s; margin-top: 10px;
+    .btn-dashboard {
+      display: inline-block;
+      margin: 30px auto;
+      background: transparent;
+      border: 2px solid #00ff88;
+      color: #00ff88;
+      padding: 10px 25px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: bold;
+      transition: 0.3s;
+      text-align: center;
     }
-    .btn-back:hover { border-color: #fff; color: #fff; background: rgba(255,255,255,0.05); }
+    .btn-dashboard:hover {
+      background: #00ff88;
+      color: #000;
+    }
+    .center-btn {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
 
     canvas { display: none; }
   </style>
+
+  <!-- MediaPipe Face Mesh -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -308,8 +325,9 @@
     <div id="logList"></div>
     <div id="logEmpty" style="font-size:0.8em;color:var(--muted);text-align:center;padding:10px;">No attendance marked yet</div>
   </div>
-
-  <a href="{{ url_for('professor_dashboard' if session.get('role') == 'professor' else 'index') }}" class="btn-back">⬅ Back to Dashboard</a>
+  <div class="center-btn">
+    <a href="{{ url_for('professor_dashboard' if session.get('role') == 'professor' else 'index') }}" class="btn-dashboard">🏠 Back to Dashboard</a>
+  </div>
 
 </div>
 
@@ -329,7 +347,6 @@ const logList     = document.getElementById('logList');
 const logEmpty    = document.getElementById('logEmpty');
 const livenessChallenge = document.getElementById('livenessChallenge');
 
-// Liveness challenge rotation
 const CHALLENGES = [
   { text: '👁️ Blink your eyes slowly', key: 'blink' },
   { text: '😊 Give a smile', key: 'smile' },
@@ -337,24 +354,18 @@ const CHALLENGES = [
   { text: '⬅️ Turn head slightly left', key: 'left' },
 ];
 let challengeIdx = 0;
-let lastMarked = {};   // prevent duplicate log entries
-let isScanning = false;
+let currentChallenge = CHALLENGES[0].key;
+let lastMarked = {};
+let isSending = false;
+let challengePassed = false;
+let livenessPassedFrames = 0; // Require a few consecutive frames of passing to avoid false positives
 
 // ---- Chip helpers ----
-function chipActive(id) {
-  document.getElementById('lc_' + id).className = 'liveness-chip active';
-}
-function chipDone(id) {
-  document.getElementById('lc_' + id).className = 'liveness-chip done';
-}
-function chipReset(id) {
-  document.getElementById('lc_' + id).className = 'liveness-chip';
-}
-function resetChips() {
-  ['face','live','match','conf'].forEach(chipReset);
-}
+function chipActive(id) { document.getElementById('lc_' + id).className = 'liveness-chip active'; }
+function chipDone(id) { document.getElementById('lc_' + id).className = 'liveness-chip done'; }
+function chipReset(id) { document.getElementById('lc_' + id).className = 'liveness-chip'; }
+function resetChips() { ['face','live','match','conf'].forEach(chipReset); }
 
-// ---- Status helpers ----
 function setStatus(icon, text, sub, color) {
   statusIcon.textContent = icon;
   statusText.textContent = text;
@@ -362,146 +373,224 @@ function setStatus(icon, text, sub, color) {
   statusCard.className   = 'status-card ' + (color || '');
 }
 
-// ---- Log entry ----
 function addLog(name, roll, status) {
   const key = name + roll;
-  if (lastMarked[key] && Date.now() - lastMarked[key] < 30000) return; // debounce 30s
+  if (lastMarked[key] && Date.now() - lastMarked[key] < 30000) return;
   lastMarked[key] = Date.now();
-
-  logEmpty.style.display = 'none';
-  const now = new Date().toLocaleTimeString();
+  if (logEmpty) logEmpty.style.display = 'none';
   const div = document.createElement('div');
   div.className = 'log-entry';
   div.innerHTML = `
-    <div class="log-avatar">👤</div>
-    <div>
+    <div class="log-avatar">${name.charAt(0)}</div>
+    <div style="flex:1">
       <div class="log-name">${name}</div>
-      <div class="log-time">${roll} &nbsp;·&nbsp; ${now}</div>
+      <div class="log-time">${new Date().toLocaleTimeString()}</div>
     </div>
     <div class="log-badge ${status === 'Present' ? 'present' : 'unknown'}">${status}</div>`;
   logList.prepend(div);
-
-  // keep max 5 entries visible
   const entries = logList.querySelectorAll('.log-entry');
   if (entries.length > 5) entries[entries.length-1].remove();
 }
 
-// ---- Show liveness challenge ----
 function rotateLivenessChallenge() {
   const c = CHALLENGES[challengeIdx % CHALLENGES.length];
+  currentChallenge = c.key;
   livenessChallenge.textContent = c.text;
   livenessChallenge.classList.add('active');
   challengeIdx++;
+  challengePassed = false;
+  livenessPassedFrames = 0;
 }
 
-// =============================================
-// CAMERA START
-// =============================================
-navigator.mediaDevices.getUserMedia({
-  video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
-})
-.then(stream => {
-  video.srcObject = stream;
-  setStatus('🔍', 'Scanning...', 'Position your face inside the oval', 'orange');
-  startScanLoop();
-})
-.catch(err => {
+// MediaPipe Math Helpers
+function dist(p1, p2) {
+  return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+}
+function getEAR(lm, eyeIndices) {
+  const v1 = dist(lm[eyeIndices[1]], lm[eyeIndices[5]]);
+  const v2 = dist(lm[eyeIndices[2]], lm[eyeIndices[4]]);
+  const h = dist(lm[eyeIndices[0]], lm[eyeIndices[3]]);
+  return (v1 + v2) / (2.0 * h);
+}
+
+function checkLiveness(landmarks) {
+  if (currentChallenge === 'blink') {
+    const l_ear = getEAR(landmarks, [33, 160, 158, 133, 153, 144]);
+    const r_ear = getEAR(landmarks, [362, 385, 387, 263, 373, 380]);
+    return ((l_ear + r_ear) / 2) < 0.22; 
+  }
+  if (currentChallenge === 'smile') {
+    const mouth = dist(landmarks[61], landmarks[291]);
+    const face = dist(landmarks[234], landmarks[454]);
+    return (mouth / face) > 0.40;
+  }
+  if (currentChallenge === 'left') {
+    // MediaPipe normalizes Z based on face size.
+    // Right cheek (454) vs Left cheek (234). User turns head left = their left cheek moves away (Z increases).
+    return landmarks[234].z > (landmarks[454].z + 0.04);
+  }
+  if (currentChallenge === 'up') {
+    const eyeY = (landmarks[33].y + landmarks[263].y) / 2;
+    const noseY = landmarks[1].y;
+    // Lower y is physically higher on screen
+    return (noseY - eyeY) < 0.07;
+  }
+  return false;
+}
+
+// Send frame to server ONCE
+async function sendFrameToServer() {
+  if (isSending) return;
+  isSending = true;
+
+  // Capture current video frame
+  const ctx = canvas.getContext('2d');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+  const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+
+  chipActive('match');
+  faceOval.className = 'face-oval scanning';
+  setStatus('🔍', 'Verifying ID...', 'Hold still inside the oval', 'orange');
+
+  try {
+    const res  = await fetch('/process_frame', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: dataURL }),
+      credentials: 'same-origin'
+    });
+    const data = await res.json();
+
+    const msg   = data.message || '';
+    const color = data.color   || '';
+    const cls   = data.current_class || 'No active class';
+    let simText = '';
+    if (data.sim_score !== undefined) {
+      const pct = (data.sim_score * 100).toFixed(1);
+      simText = `Similarity Score: ${pct}% (Threshold: 45%)`;
+    }
+
+    classDisp.textContent = '📚 ' + cls;
+    classSub.textContent  = new Date().toLocaleTimeString();
+
+    if (color === '#00ff88' || color === 'green' || msg.includes('Marked') || msg.includes('Present')) {
+      chipDone('match'); chipDone('conf');
+      faceOval.className = 'face-oval matched';
+      livenessChallenge.classList.remove('active');
+      setStatus('✅', msg, simText || 'Attendance marked successfully', 'green');
+      const nameMatch = msg.match(/✅ (.+?) marked/);
+      const name = nameMatch ? nameMatch[1] : 'Student';
+      addLog(name, '', 'Present');
+    } else if (msg.includes('Unknown') || msg.includes('not recognized') || color === 'red') {
+      chipReset('match'); chipReset('conf');
+      faceOval.className = 'face-oval unknown';
+      setStatus('❓', 'Face not recognized', simText || 'Not in the student database', 'red');
+    } else if (msg.includes('Wrong Class')) {
+      chipDone('match');
+      faceOval.className = 'face-oval matched';
+      setStatus('⚠️', msg, simText || 'Student belongs to a different semester', 'orange');
+    } else if (msg.includes('already') || msg.includes('Already')) {
+      chipDone('match');
+      faceOval.className = 'face-oval matched';
+      setStatus('✔️', msg, simText || 'Attendance was already recorded', 'blue');
+    } else if (color === 'cyan' || color === 'blue') {
+      setStatus('⚠️', msg, simText || 'Face not recognized in database', color);
+    } else {
+      faceOval.className = 'face-oval unknown';
+      setStatus('🔍', msg, 'Scanning...', 'orange');
+    }
+  } catch (err) {
+    console.error(err);
+    setStatus('⚠️', 'Connection issue', 'Retrying...', '');
+    resetChips();
+  }
+
+  // Cooldown before next scan
+  setTimeout(() => {
+    isSending = false;
+    rotateLivenessChallenge();
+    resetChips();
+    faceOval.className = 'face-oval scanning';
+    setStatus('👁️', 'Awaiting Liveness', 'Please perform the challenge below', 'orange');
+  }, 3500);
+}
+
+// MediaPipe Setup
+const faceMesh = new FaceMesh({locateFile: (file) => {
+  return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+}});
+faceMesh.setOptions({
+  maxNumFaces: 1,
+  refineLandmarks: true,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
+
+faceMesh.onResults((results) => {
+  if (isSending) return; // Wait if we are verifying
+
+  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+    chipActive('face');
+    chipActive('live');
+    faceOval.className = 'face-oval scanning';
+    
+    if (!livenessChallenge.classList.contains('active')) {
+      setStatus('👁️', 'Awaiting Liveness', 'Please perform the challenge below', 'orange');
+      livenessChallenge.classList.add('active');
+    }
+
+    const landmarks = results.multiFaceLandmarks[0];
+    const passed = checkLiveness(landmarks);
+
+    if (passed) {
+      livenessPassedFrames++;
+      if (livenessPassedFrames > 2) { // Passed for 3 frames continuously
+        challengePassed = true;
+        chipDone('live');
+        chipDone('face');
+        livenessChallenge.textContent = '✔️ Challenge Passed!';
+        livenessChallenge.style.background = 'rgba(0,255,136,0.1)';
+        livenessChallenge.style.color = 'var(--green)';
+        livenessChallenge.style.borderColor = 'var(--green)';
+        
+        // Trigger capture
+        sendFrameToServer();
+      }
+    } else {
+      // Allow minor flickers by not resetting immediately, or reset if desired
+      // livenessPassedFrames = 0; 
+      livenessChallenge.style.background = 'rgba(255,255,255,0.05)';
+      livenessChallenge.style.color = '#fff';
+      livenessChallenge.style.borderColor = 'var(--border)';
+    }
+
+  } else {
+    chipReset('face');
+    chipReset('live');
+    faceOval.className = 'face-oval scanning';
+    setStatus('🔍', 'Looking for face', 'Position your face inside the oval', 'orange');
+    livenessPassedFrames = 0;
+  }
+});
+
+const camera = new Camera(video, {
+  onFrame: async () => {
+    await faceMesh.send({image: video});
+  },
+  width: 640,
+  height: 480
+});
+
+rotateLivenessChallenge();
+camera.start().then(() => {
+  setStatus('🔍', 'Camera Started', 'Warming up AI engine...', 'orange');
+}).catch(err => {
   setStatus('❌', 'Camera blocked!', 'Allow camera access in your browser settings', 'red');
   faceOval.className = 'face-oval unknown';
 });
 
-// =============================================
-// SCAN LOOP — every 2.5 seconds
-// =============================================
-function startScanLoop() {
-  setInterval(async () => {
-    if (isScanning || !video.videoWidth) return;
-    isScanning = true;
-
-    // Rotate liveness challenge every scan
-    rotateLivenessChallenge();
-
-    // Capture frame
-    const ctx = canvas.getContext('2d');
-    canvas.width  = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
-    const dataURL = canvas.toDataURL('image/jpeg', 0.7);
-
-    // Update UI — scanning
-    chipActive('face');
-    faceOval.className = 'face-oval scanning';
-    setStatus('🔍', 'Scanning face...', 'Hold still inside the oval', 'orange');
-
-    try {
-      const res  = await fetch('/process_frame', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: dataURL, liveness_challenge: CHALLENGES[(challengeIdx-1) % CHALLENGES.length].key })
-      });
-      const data = await res.json();
-
-      // Parse response from backend
-      const msg   = data.message || '';
-      const color = data.color   || '';
-      const cls   = data.current_class || 'No active class';
-
-      // Update class info
-      classDisp.textContent = '📚 ' + cls;
-      classSub.textContent  = new Date().toLocaleTimeString();
-
-      // Determine state from backend response
-      if (color === '#00ff88' || color === 'green' || msg.includes('Marked') || msg.includes('Present')) {
-        // ✅ MATCH
-        chipDone('face'); chipDone('live'); chipDone('match'); chipDone('conf');
-        faceOval.className = 'face-oval matched';
-        livenessChallenge.classList.remove('active');
-        setStatus('✅', msg, 'Attendance marked successfully', 'green');
-
-        // Extract name from message for log
-        const nameMatch = msg.match(/✅ (.+?) marked/);
-        const name = nameMatch ? nameMatch[1] : 'Student';
-        addLog(name, '', 'Present');
-
-        setTimeout(resetChips, 3000);
-
-      } else if (msg.includes('Unknown') || msg.includes('not recognized') || color === 'red') {
-        chipDone('face'); chipDone('live'); chipReset('match'); chipReset('conf');
-        faceOval.className = 'face-oval unknown';
-        setStatus('❓', 'Face not recognized', 'Not in the student database', 'red');
-        setTimeout(resetChips, 2000);
-
-      } else if (msg.includes('No face') || msg.includes('no face')) {
-        resetChips();
-        faceOval.className = 'face-oval scanning';
-        setStatus('👁️', 'No face detected', 'Center your face inside the oval', 'orange');
-        livenessChallenge.classList.remove('active');
-
-      } else if (msg.includes('already') || msg.includes('Already')) {
-        chipDone('face'); chipDone('live'); chipDone('match');
-        faceOval.className = 'face-oval matched';
-        setStatus('✔️', msg, 'Attendance was already recorded', 'blue');
-        setTimeout(resetChips, 2000);
-
-      } else if (color === 'cyan' || color === 'blue') {
-        chipActive('face');
-        setStatus('⏳', msg, 'Please wait...', 'blue');
-
-      } else {
-        chipActive('face');
-        faceOval.className = 'face-oval scanning';
-        setStatus('🔍', msg, 'Scanning...', 'orange');
-      }
-
-    } catch (err) {
-      setStatus('⚠️', 'Connection issue', 'Retrying...', '');
-      resetChips();
-    }
-
-    isScanning = false;
-  }, 2500);
-}
 </script>
-
 </body>
 </html>

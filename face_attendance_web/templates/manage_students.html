@@ -101,8 +101,8 @@
 
   <h1>👨‍🎓 Manage Students</h1>
 
-  <div class="filter-box">
-    <form method="GET" action="{{ url_for('manage_students') }}">
+  <div class="filter-box" style="display: flex; justify-content: center; align-items: center; gap: 20px; flex-wrap: wrap;">
+    <form method="GET" action="{{ url_for('manage_students') }}" style="display: flex; align-items: center;">
         <label>Filter by:</label>
         <select name="semester" onchange="this.form.submit()">
             <option value="All" {% if selected_semester == 'All' %}selected{% endif %}>-- All Semesters --</option>
@@ -116,9 +116,41 @@
             <option value="8th Semester" {% if selected_semester == '8th Semester' %}selected{% endif %}>8th Semester</option>
         </select>
     </form>
+
+    <div style="display: flex; align-items: center; position: relative;">
+        <span style="position: absolute; left: 10px; color: #888;">🔍</span>
+        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search Name, Roll No..." 
+               style="padding: 8px 10px 8px 35px; border-radius: 5px; border: 1px solid #333; background: #111; color: #fff; outline: none; width: 250px;">
+    </div>
   </div>
 
-  <table>
+  <script>
+    function filterTable() {
+      const input = document.getElementById("searchInput");
+      const filter = input.value.toLowerCase();
+      const table = document.getElementById("studentTable");
+      const tr = table.getElementsByTagName("tr");
+
+      for (let i = 1; i < tr.length; i++) { // Skip header row
+        const tds = tr[i].getElementsByTagName("td");
+        if (tds.length > 0 && tds.length >= 5) {
+          const name = tds[1].textContent || tds[1].innerText;
+          const roll = tds[2].textContent || tds[2].innerText;
+          const email = tds[4].textContent || tds[4].innerText;
+          
+          if (name.toLowerCase().indexOf(filter) > -1 || 
+              roll.toLowerCase().indexOf(filter) > -1 || 
+              email.toLowerCase().indexOf(filter) > -1) {
+            tr[i].style.display = "";
+          } else {
+            tr[i].style.display = "none";
+          }
+        }       
+      }
+    }
+  </script>
+
+  <table id="studentTable">
     <thead>
       <tr>
         <th>ID</th>

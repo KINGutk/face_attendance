@@ -143,6 +143,11 @@
     <div class="signup-link">
       <p>Don't have an account? <a href="{{ url_for('student_signup') }}">Sign up here</a></p>
     </div>
+
+    <div class="role-links" style="margin-top: 18px; display: flex; gap: 12px; justify-content: center;">
+      <a href="{{ url_for('login') }}" style="color: #888; text-decoration: none; font-size: 0.82em; padding: 8px 16px; border: 1px solid #333; border-radius: 8px; transition: all 0.3s;">🔐 Admin</a>
+      <a href="{{ url_for('professor_login') }}" style="color: #888; text-decoration: none; font-size: 0.82em; padding: 8px 16px; border: 1px solid #333; border-radius: 8px; transition: all 0.3s;">👨‍🏫 Faculty</a>
+    </div>
   </div>
 
   <script>

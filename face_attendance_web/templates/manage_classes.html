@@ -116,6 +116,12 @@
 
   <h1>🏫 Manage Timetable</h1>
 
+  {% if error %}
+    <div style="background: rgba(255, 68, 68, 0.2); color: #ff4444; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid #ff4444;">
+      <strong>⚠️ Overlap Detected:</strong> {{ error }}
+    </div>
+  {% endif %}
+
   <form method="POST">
     <h3 style="margin-top:0; color:#ccc;">Add New Class</h3>
     

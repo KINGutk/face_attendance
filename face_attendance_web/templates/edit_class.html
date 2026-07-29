@@ -58,6 +58,12 @@
 
   <h1>✏️ Update Class Schedule</h1>
 
+  {% if error %}
+    <div style="background: rgba(255, 68, 68, 0.2); color: #ff4444; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid #ff4444;">
+      <strong>⚠️ Overlap Detected:</strong> {{ error }}
+    </div>
+  {% endif %}
+
   <form method="POST">
     <label>Subject Name:</label>
     <input type="text" name="subject_name" value="{{ class_info.subject_name }}" required>

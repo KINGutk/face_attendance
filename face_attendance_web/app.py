@@ -16,6 +16,13 @@ import atexit
 from flask_mail import Mail, Message
 from apscheduler.schedulers.background import BackgroundScheduler
 
+def get_pkt_now():
+    """Force Pakistan Standard Time (UTC+5) everywhere."""
+    return datetime.utcnow() + timedelta(hours=5)
+
+
+
+
 # Fix Windows console encoding for emoji characters
 if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
     try:
@@ -48,7 +55,9 @@ except ImportError:
 # 🔧 FLASK APP CONFIG
 # ==================================================
 app = Flask(__name__)
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'super_secure_authentic_key_2026')
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', '')
+if not app.secret_key:
+    raise RuntimeError('FLASK_SECRET_KEY not set! Create a .env file in the project root.')
 app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB for 6x face images
 
 # ==================================================
@@ -82,7 +91,17 @@ print("ArcFace loaded (512D, 99.8% accuracy)")
 def get_face_embedding(img_bgr):
     """Generates a 512-dimensional face embedding using ArcFace (ONNX Runtime)."""
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-    img_resized = cv2.resize(img_rgb, (112, 112))
+    
+    # Pad to square to prevent aspect ratio distortion from different cameras
+    h, w = img_rgb.shape[:2]
+    max_dim = max(h, w)
+    top = (max_dim - h) // 2
+    bottom = max_dim - h - top
+    left = (max_dim - w) // 2
+    right = max_dim - w - left
+    img_padded = cv2.copyMakeBorder(img_rgb, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+    
+    img_resized = cv2.resize(img_padded, (112, 112))
     img_norm = (img_resized.astype(np.float32) - 127.5) / 127.5
     img_chw = np.transpose(img_norm, (2, 0, 1))  # HWC -> CHW
     img_batch = np.expand_dims(img_chw, axis=0)   # Add batch dim
@@ -153,8 +172,8 @@ def detect_and_crop_face(img_bgr, conf_threshold=0.55, min_area_ratio=0.08):
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', 'khushaldegreecollege@gmail.com')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', 'ypfb ljkv zfgv hriq')
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', app.config['MAIL_USERNAME'])
 mail = Mail(app)
 
@@ -181,47 +200,75 @@ def get_db_connection():
         return None
 
 
+import os
+
 # ==================================================
-# 🖼️ FACE CACHE (DIRECT FROM DATABASE)
+# 🖼️ FACE CACHE (DIRECT FROM DATABASE OR DISK)
 # ==================================================
-KNOWN_ENCODINGS = []
+KNOWN_ENCODINGS_MAT = None
 KNOWN_NAMES = []
 KNOWN_ROLLS = []
 
 
 def load_known_faces():
-    """Loads Face Maps (JSON) directly from TiDB."""
-    print("🔄 Loading AI Face Maps from Database...")
-    global KNOWN_ENCODINGS, KNOWN_NAMES, KNOWN_ROLLS
-    KNOWN_ENCODINGS, KNOWN_NAMES, KNOWN_ROLLS = [], [], []
-
+    """Loads Face Maps from a binary .npz cache, or builds it from the Database if outdated."""
+    global KNOWN_ENCODINGS_MAT, KNOWN_NAMES, KNOWN_ROLLS
+    
     db = get_db_connection()
     if not db:
         return
 
-    try:
-        cursor = db.cursor(dictionary=True)
-        # Ensure face_data column exists
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT COUNT(id) as count FROM students WHERE status = 'approved' AND face_data IS NOT NULL")
+    expected_students = cursor.fetchone()['count']
+    
+    cache_file = "face_cache.npz"
+    
+    # Check if cache is valid (we approximate validity by checking if the unique student count matches)
+    if os.path.exists(cache_file):
         try:
-            cursor.execute("ALTER TABLE students ADD COLUMN face_data LONGTEXT;")
-            db.commit()
-            print("✅ 'face_data' column added to DB!")
-        except Exception:
-            pass
+            data = np.load(cache_file, allow_pickle=True)
+            unique_rolls = set(data['rolls'])
+            if len(unique_rolls) == expected_students:
+                KNOWN_ENCODINGS_MAT = data['encodings']
+                KNOWN_NAMES = data['names'].tolist()
+                KNOWN_ROLLS = data['rolls'].tolist()
+                print(f"⚡ Instant Load: Loaded {len(KNOWN_ENCODINGS_MAT)} face maps from binary cache.")
+                cursor.close()
+                db.close()
+                return
+            else:
+                print("🔄 Cache is outdated. Rebuilding from database...")
+        except Exception as e:
+            print(f"⚠️ Cache read error: {e}. Rebuilding...")
 
-        cursor.execute("SELECT roll_no, name, face_data FROM students WHERE status = 'approved'")
+    print("🔄 Loading AI Face Maps from Database...")
+    temp_encodings, temp_names, temp_rolls = [], [], []
+
+    try:
+        cursor.execute("SELECT roll_no, name, face_data FROM students WHERE status = 'approved' AND face_data IS NOT NULL")
         for student in cursor.fetchall():
-            if student['face_data']:
-                try:
-                    encodings_list = json.loads(student['face_data'])
-                    for enc in encodings_list:
-                        KNOWN_ENCODINGS.append(np.array(enc))
-                        KNOWN_NAMES.append(student['name'])
-                        KNOWN_ROLLS.append(student['roll_no'])
-                except Exception as e:
-                    print(f"⚠️ Error parsing JSON for {student['name']}: {e}")
-        print(f"✅ Loaded {len(KNOWN_ENCODINGS)} total Math Maps.")
+            try:
+                encodings_list = json.loads(student['face_data'])
+                for enc in encodings_list:
+                    temp_encodings.append(np.array(enc, dtype=np.float32))
+                    temp_names.append(student['name'])
+                    temp_rolls.append(student['roll_no'])
+            except Exception as e:
+                print(f"⚠️ Error parsing JSON for {student['name']}: {e}")
+                
+        if temp_encodings:
+            KNOWN_ENCODINGS_MAT = np.vstack(temp_encodings)
+            KNOWN_NAMES = temp_names
+            KNOWN_ROLLS = temp_rolls
+            np.savez_compressed(cache_file, encodings=KNOWN_ENCODINGS_MAT, names=np.array(KNOWN_NAMES), rolls=np.array(KNOWN_ROLLS))
+            print(f"✅ Loaded {len(temp_encodings)} math maps and saved to binary cache.")
+        else:
+            KNOWN_ENCODINGS_MAT = None
+            print("⚠️ No approved faces found in the database.")
+            
     finally:
+        cursor.close()
         db.close()
 
 
@@ -230,8 +277,11 @@ load_known_faces()
 
 @app.route('/reload_faces')
 def reload_faces():
+    if os.path.exists("face_cache.npz"):
+        os.remove("face_cache.npz")
     load_known_faces()
-    return jsonify({"success": True, "message": f"Face DB Reloaded. {len(KNOWN_ENCODINGS)} maps loaded."})
+    count = len(KNOWN_ENCODINGS_MAT) if KNOWN_ENCODINGS_MAT is not None else 0
+    return jsonify({"success": True, "message": f"Face DB Reloaded. {count} maps loaded."})
 
 
 # ==================================================
@@ -290,7 +340,7 @@ def update_detection(name, roll, subject, status, message):
         "subject": subject,
         "status": status,
         "message": message,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": get_pkt_now().isoformat()
     }
 
 
@@ -472,7 +522,7 @@ def process_frame():
     cursor = None
     try:
         # ⚠️ DB EMPTY FIX: Agar dusre worker ki memory khali ho, to foran load karo
-        if not KNOWN_ENCODINGS:
+        if KNOWN_ENCODINGS_MAT is None:
             load_known_faces()
 
         data = request.json
@@ -490,18 +540,24 @@ def process_frame():
         if not db:
             return jsonify({"message": "DB connection error", "color": "red", "current_class": "--"})
         cursor = db.cursor(dictionary=True)
-        now = datetime.utcnow() + timedelta(hours=5)  # PKT fix
+        now = get_pkt_now()
         date_today = now.date()
         time_now = now.strftime("%H:%M:%S")
         day_name = now.strftime("%A")
+        prof_filter = ""
+        params = [day_name, time_now, time_now]
+        if session.get('role') == 'professor':
+            prof_filter = " AND professor_id=%s"
+            params.append(session.get('user_id'))
+            
         cursor.execute(
-            "SELECT * FROM classes WHERE day_of_week=%s AND start_time<=%s AND end_time>=%s LIMIT 1",
-            (day_name, time_now, time_now)
+            f"SELECT * FROM classes WHERE day_of_week=%s AND start_time<=%s AND end_time>=%s{prof_filter} LIMIT 1",
+            tuple(params)
         )
         current_class = cursor.fetchone()
         class_info = f"{current_class['subject_name']} ({current_class['semester']})" if current_class else "No Active Class"
 
-        if not KNOWN_ENCODINGS:
+        if KNOWN_ENCODINGS_MAT is None:
             return jsonify({"message": "DB Empty", "color": "orange", "current_class": class_info})
 
         # YOLO Detection (downscale for speed)
@@ -519,28 +575,36 @@ def process_frame():
         if face_crop.size == 0:
             return jsonify({"message": "Crop error", "color": "red", "current_class": class_info})
 
-        # PyTorch Embedding & Cosine Similarity Match
+        # Vectorized Cosine Similarity (Dot Product because embeddings are L2 normalized)
+        if KNOWN_ENCODINGS_MAT is None or len(KNOWN_ENCODINGS_MAT) == 0:
+            return jsonify({"message": "Database is empty", "color": "red", "current_class": class_info})
+            
         query_emb = get_face_embedding(face_crop)
-        sims = [cosine_similarity(query_emb, k) for k in KNOWN_ENCODINGS]
+        sims = np.dot(KNOWN_ENCODINGS_MAT, query_emb)
         best_idx = int(np.argmax(sims))
-        best_sim = sims[best_idx]
+        best_sim = float(sims[best_idx])
 
-        THRESHOLD = 0.68  # ArcFace: dedicated face model, high-accuracy threshold
+        THRESHOLD = 0.45  # ArcFace: adjusted for unaligned faces from different cameras
         if best_sim < THRESHOLD:
             update_detection("Unknown", "Unknown", class_info, "unknown", "⚠️ Unknown Face Detected!")
-            return jsonify({"message": "Unknown Face", "color": "red", "current_class": class_info})
+            return jsonify({"message": "Unknown Face", "color": "red", "current_class": class_info, "sim_score": round(best_sim, 3)})
 
         name = KNOWN_NAMES[best_idx]
         roll = KNOWN_ROLLS[best_idx]
 
         if not current_class:
             update_detection(name, roll, class_info, "recognized", f"👤 Recognized: {name} (No Class)")
-            return jsonify({"message": f"👤 Recognized: {name} (No Class)", "color": "cyan", "current_class": class_info})
+            return jsonify({"message": f"👤 Recognized: {name} (No Class)", "color": "cyan", "current_class": class_info, "sim_score": round(best_sim, 3)})
 
         # Mark Attendance
-        cursor.execute("SELECT id, email FROM students WHERE roll_no=%s", (roll,))
+        cursor.execute("SELECT id, email, semester FROM students WHERE roll_no=%s", (roll,))
         student = cursor.fetchone()
+        
         if student:
+            if str(student['semester']) != str(current_class['semester']):
+                message = f"❌ Wrong Class: {name} (Sem {student['semester']})"
+                update_detection(name, roll, current_class['subject_name'], "wrong_class", message)
+                return jsonify({"message": message, "color": "orange", "current_class": class_info, "sim_score": round(best_sim, 3)})
             cursor.execute(
                 "SELECT id FROM attendance WHERE student_id=%s AND date=%s AND class_id=%s",
                 (student['id'], date_today, current_class['id'])
@@ -564,11 +628,11 @@ def process_frame():
 
                 message = f"✅ Present: {name}"
                 update_detection(name, roll, current_class['subject_name'], "present", message)
-                return jsonify({"message": message, "color": "green", "current_class": class_info})
+                return jsonify({"message": message, "color": "green", "current_class": class_info, "sim_score": round(best_sim, 3)})
             else:
                 message = f"ℹ️ Already Marked: {name}"
                 update_detection(name, roll, current_class['subject_name'], "already_attended", message)
-                return jsonify({"message": message, "color": "blue", "current_class": class_info})
+                return jsonify({"message": message, "color": "blue", "current_class": class_info, "sim_score": round(best_sim, 3)})
 
         return jsonify({"message": "Student DB Error", "color": "red", "current_class": class_info})
 
@@ -591,7 +655,7 @@ def test_college_email():
     try:
         msg = Message(
             subject="🎓 Khushal Degree College - Email System Active!",
-            recipients=[os.environ.get('MAIL_USERNAME', 'khushaldegreecollege@gmail.com')],
+            recipients=[app.config['MAIL_USERNAME']],
             body="""
 🎉 CONGRATULATIONS!
 
@@ -604,7 +668,7 @@ Khushal Degree College
             """
         )
         mail.send(msg)
-        return f"✅ College email system ACTIVATED successfully! Check {os.environ.get('MAIL_USERNAME', 'khushaldegreecollege@gmail.com')}"
+        return f"✅ College email system ACTIVATED successfully! Check {app.config['MAIL_USERNAME']}"
     except Exception as e:
         return f"❌ Email test failed: {str(e)}"
 
@@ -785,7 +849,7 @@ def student_signup():
                     st_encs = json.loads(st['face_data'])
                     if len(st_encs) > 0:
                         sim = cosine_similarity(embeddings["FRONT"], np.array(st_encs[0]))
-                        if sim >= 0.68:
+                        if sim >= 0.45:
                             return render_template('student_signup.html', error=f"⚠️ Face match error: This face is already registered to {st['name']}!")
                 except Exception:
                     pass
@@ -828,7 +892,7 @@ def login():
         return redirect(url_for('index'))
     if request.method == 'POST':
         user, pwd = request.form['username'], request.form['password']
-        if user == os.environ.get('ADMIN_USER', 'admin') and pwd == os.environ.get('ADMIN_PASS', 'admin123'):
+        if user == os.environ.get('ADMIN_USER', '') and pwd == os.environ.get('ADMIN_PASS', ''):
             session['logged_in'], session['role'] = True, 'admin'
             return redirect(url_for('index'))
         return render_template('login.html', error="❌ Invalid credentials")
@@ -868,69 +932,26 @@ def dashboard_stats():
         present_result = cursor.fetchone()
         present_today = present_result['present_today'] if present_result else 0
 
-        # 3. Upcoming Class (Smart Weekly Wrapping Logic)
-        now = now_pkt
-        current_time = now.time()
-        current_day = now.strftime("%A")
-
-        days_map = {
-            'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3,
-            'Friday': 4, 'Saturday': 5, 'Sunday': 6
-        }
-
-        cursor.execute("SELECT subject_name, day_of_week, start_time FROM classes")
-        all_classes = cursor.fetchall()
-
-        upcoming_class_name = "No Classes"
-        if all_classes and current_day in days_map:
-            current_day_idx = days_map[current_day]
-            min_diff = None
-            upcoming_cls = None
-
-            for cls in all_classes:
-                day = cls['day_of_week']
-                if day not in days_map:
-                    continue
-                day_idx = days_map[day]
-
-                start_t = cls['start_time']
-                if isinstance(start_t, timedelta):
-                    start_t = (datetime.min + start_t).time()
-                elif isinstance(start_t, str):
-                    try:
-                        start_t = datetime.strptime(start_t, "%H:%M:%S").time()
-                    except ValueError:
-                        try:
-                            start_t = datetime.strptime(start_t, "%H:%M").time()
-                        except ValueError:
-                            continue
-
-                day_diff = (day_idx - current_day_idx) % 7
-                if day_diff == 0:
-                    if start_t <= current_time:
-                        day_diff = 7
-
-                diff_seconds = day_diff * 86400 + (start_t.hour - current_time.hour) * 3600 + (start_t.minute - current_time.minute) * 60 + (start_t.second - current_time.second)
-
-                if min_diff is None or diff_seconds < min_diff:
-                    min_diff = diff_seconds
-                    upcoming_cls = cls
-                    upcoming_cls['resolved_start_time'] = start_t
-
-            if upcoming_cls:
-                t = upcoming_cls['resolved_start_time']
-                time_str = t.strftime("%I:%M %p").lstrip('0')
-                day_str = upcoming_cls['day_of_week']
-
-                day_diff = (days_map[day_str] - current_day_idx) % 7
-                if day_diff == 0:
-                    day_label = "Today" if t > current_time else f"Next {day_str}"
-                elif day_diff == 1:
-                    day_label = "Tomorrow"
-                else:
-                    day_label = day_str
-
-                upcoming_class_name = f"{upcoming_cls['subject_name']} ({day_label} {time_str})"
+        # 3. Weekly Attendance Trend (Last 7 Days)
+        weekly_trend = []
+        day_labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        for i in range(6, -1, -1):  # 6 days ago to today
+            d = today - timedelta(days=i)
+            cursor.execute("""
+                SELECT 
+                    COUNT(CASE WHEN status='Present' THEN 1 END) as p,
+                    COUNT(*) as t
+                FROM attendance WHERE date = %s
+            """, (d,))
+            row = cursor.fetchone()
+            pct = round((row['p'] / row['t']) * 100) if row['t'] > 0 else 0
+            weekly_trend.append({
+                'date': d.strftime('%Y-%m-%d'),
+                'label': day_labels[d.weekday()],
+                'percent': pct,
+                'present': row['p'],
+                'total': row['t']
+            })
 
         # 4. Pending Signups (Students + Professors)
         cursor.execute("SELECT COUNT(*) as count FROM students WHERE status='pending'")
@@ -944,12 +965,12 @@ def dashboard_stats():
         return jsonify({
             "students": total_students,
             "present_today": present_today,
-            "upcoming_class": upcoming_class_name,
+            "weekly_trend": weekly_trend,
             "pending_signups": total_pending_signups
         })
     except Exception as e:
         print("❌ Dashboard stats error:", e)
-        return jsonify({"students": 0, "present_today": 0, "upcoming_class": "Error", "pending_signups": 0})
+        return jsonify({"students": 0, "present_today": 0, "weekly_trend": [], "pending_signups": 0})
     finally:
         if cursor:
             cursor.close()
@@ -1158,30 +1179,10 @@ def apply_leave():
                     (logged_in_student_id, subject_name, application_purpose, application_text, start_date, end_date)
                 )
             else:
-                cursor.execute("SELECT semester FROM students WHERE id = %s", (logged_in_student_id,))
-                student_data_row = cursor.fetchone()
-
-                if student_data_row:
-                    student_semester = student_data_row['semester']
-                    cursor.execute("SELECT DISTINCT subject_name FROM classes WHERE semester = %s", (student_semester,))
-                    semester_subjects = cursor.fetchall()
-
-                    if semester_subjects:
-                        for sub in semester_subjects:
-                            cursor.execute(
-                                "INSERT INTO leaves (student_id, subject_name, application_purpose, application_text, start_date, end_date, status) VALUES (%s, %s, %s, %s, %s, %s, 'Pending')",
-                                (logged_in_student_id, sub['subject_name'], application_purpose, application_text, start_date, end_date)
-                            )
-                    else:
-                        cursor.execute(
-                            "INSERT INTO leaves (student_id, subject_name, application_purpose, application_text, start_date, end_date, status) VALUES (%s, %s, %s, %s, %s, %s, 'Pending')",
-                            (logged_in_student_id, None, application_purpose, application_text, start_date, end_date)
-                        )
-                else:
-                    cursor.execute(
-                        "INSERT INTO leaves (student_id, subject_name, application_purpose, application_text, start_date, end_date, status) VALUES (%s, %s, %s, %s, %s, %s, 'Pending')",
-                        (logged_in_student_id, None, application_purpose, application_text, start_date, end_date)
-                    )
+                cursor.execute(
+                    "INSERT INTO leaves (student_id, subject_name, application_purpose, application_text, start_date, end_date, status) VALUES (%s, %s, %s, %s, %s, %s, 'Pending')",
+                    (logged_in_student_id, None, application_purpose, application_text, start_date, end_date)
+                )
 
             db.commit()
 
@@ -1255,8 +1256,7 @@ def view_requests():
                 cursor.execute("DELETE FROM students WHERE id=%s", (sid,))
             else:
                 cursor.execute("UPDATE students SET status=%s WHERE id=%s", (status, sid))
-                load_known_faces()
-
+                
         elif req_type == 'professor':
             pid = request.form.get('professor_id')
             status = 'approved' if action == 'approve' else 'rejected'
@@ -1268,6 +1268,12 @@ def view_requests():
         db.commit()
         cursor.close()
         db.close()
+        
+        if req_type == 'student' and action == 'approve':
+            if os.path.exists("face_cache.npz"):
+                os.remove("face_cache.npz")
+            load_known_faces()
+            
         return redirect(url_for('view_requests'))
 
     cursor.execute("SELECT * FROM students WHERE status='pending'")
@@ -1480,7 +1486,10 @@ def professor_dashboard():
     cursor.execute("SELECT name, email FROM professors WHERE id = %s", (professor_id,))
     prof_data = cursor.fetchone()
 
-    today_name = datetime.now().strftime("%A")
+    now_local = datetime.utcnow() + timedelta(hours=5)
+    today_name = now_local.strftime("%A")
+    today_date = now_local.strftime("%Y-%m-%d")
+
     cursor.execute("""
         SELECT * FROM classes
         WHERE professor_id = %s AND day_of_week = %s
@@ -1493,9 +1502,9 @@ def professor_dashboard():
         FROM attendance a
         JOIN classes c ON a.class_id = c.id
         WHERE c.professor_id = %s
-        AND a.date = CURDATE()
+        AND a.date = %s
         AND a.status = 'Present'
-    """, (professor_id,))
+    """, (professor_id, today_date))
     present_count = cursor.fetchone()['count']
 
     cursor.execute("""
@@ -1519,8 +1528,8 @@ def professor_dashboard():
     next_class = None
     if prof_all_classes:
         min_diff = None
-        current_time = datetime.now().time()
-        current_day = datetime.now().strftime("%A")
+        current_time = now_local.time()
+        current_day = today_name
 
         days_map = {
             'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3,
@@ -1601,11 +1610,65 @@ def professor_leaves():
         leave_id = request.form.get('leave_id')
         action = request.form.get('action')
 
-        cursor.execute("UPDATE leaves SET status=%s WHERE id=%s", (action, leave_id))
-        db.commit()
-        cursor.close()
-        db.close()
-        flash(f"Leave {action} successfully!", "success")
+        try:
+            cursor.execute("""
+                SELECT l.*, s.name, s.email, s.semester
+                FROM leaves l
+                JOIN students s ON l.student_id = s.id
+                WHERE l.id = %s
+            """, (leave_id,))
+            leave = cursor.fetchone()
+
+            if leave:
+                cursor.execute("UPDATE leaves SET status = %s WHERE id = %s", (action, leave_id))
+
+                if action == 'Approved':
+                    student_id = leave['student_id']
+                    subject_name = leave['subject_name']
+                    semester = leave['semester']
+                    start_date = leave['start_date']
+                    end_date = leave['end_date']
+
+                    if isinstance(start_date, str):
+                        start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                    if isinstance(end_date, str):
+                        end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+
+                    current_date = start_date
+                    while current_date <= end_date:
+                        if subject_name:
+                            cursor.execute("SELECT id FROM classes WHERE subject_name = %s AND semester = %s", (subject_name, semester))
+                        else:
+                            cursor.execute("SELECT id FROM classes WHERE semester = %s", (semester,))
+
+                        target_classes = cursor.fetchall()
+
+                        for cls in target_classes:
+                            class_id = cls['id']
+                            cursor.execute("DELETE FROM attendance WHERE student_id = %s AND class_id = %s AND date = %s", (student_id, class_id, current_date))
+                            cursor.execute("""
+                                INSERT INTO attendance (student_id, class_id, date, time, status, method)
+                                VALUES (%s, %s, %s, NOW(), 'Leave', 'system')
+                            """, (student_id, class_id, current_date))
+
+                        current_date += timedelta(days=1)
+
+                db.commit()
+
+                if leave['email']:
+                    try:
+                        send_leave_status_notification(
+                            leave['email'], leave['name'], action, leave['subject_name'] or 'All Subjects',
+                            leave['start_date'], leave['end_date'], leave.get('application_purpose')
+                        )
+                    except Exception as e:
+                        print(f"❌ Email sending error: {e}")
+
+                flash(f"Leave {action} successfully! Notifications sent.", "success")
+        except Exception as e:
+            db.rollback()
+            flash(f"Error processing leave: {e}", "error")
+
         return redirect(url_for('professor_leaves'))
 
     cursor.execute("""
@@ -1628,91 +1691,32 @@ def professor_leaves():
     """, (professor_id, professor_id))
 
     leave_records = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT DISTINCT l.*, s.name, s.roll_no, s.semester
+        FROM leaves l
+        JOIN students s ON l.student_id = s.id
+        WHERE l.status != 'Pending'
+        AND (
+            l.subject_name IN (
+                SELECT subject_name FROM classes WHERE professor_id = %s
+            )
+            OR (
+                (l.subject_name IS NULL OR l.subject_name = '')
+                AND s.semester IN (
+                    SELECT semester FROM classes WHERE professor_id = %s
+                )
+            )
+        )
+        ORDER BY l.start_date DESC
+    """, (professor_id, professor_id))
+    historical_leaves = cursor.fetchall()
+
     cursor.close()
     db.close()
 
-    return render_template('professor_leaves.html', leave_records=leave_records)
+    return render_template('professor_leaves.html', leave_records=leave_records, historical_leaves=historical_leaves)
 
-
-@app.route('/professor_approve_leave', methods=['POST'])
-@professor_required
-def professor_approve_leave():
-    leave_id = request.form['leave_id']
-    action = request.form['action']  # 'Approved' or 'Rejected'
-
-    db = get_db_connection()
-    if not db:
-        return jsonify({'success': False, 'error': 'Database connection error'})
-    cursor = db.cursor(dictionary=True)
-
-    try:
-        cursor.execute("""
-            SELECT l.*, s.name, s.email, s.semester
-            FROM leaves l
-            JOIN students s ON l.student_id = s.id
-            WHERE l.id = %s
-        """, (leave_id,))
-        leave = cursor.fetchone()
-
-        if not leave:
-            return jsonify({'success': False, 'error': 'Leave not found'})
-
-        cursor.execute("UPDATE leaves SET status = %s WHERE id = %s", (action, leave_id))
-
-        if action == 'Approved':
-            student_id = leave['student_id']
-            subject_name = leave['subject_name']
-            semester = leave['semester']
-            start_date = leave['start_date']
-            end_date = leave['end_date']
-
-            if isinstance(start_date, str):
-                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-            if isinstance(end_date, str):
-                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-
-            current_date = start_date
-            while current_date <= end_date:
-                if subject_name:
-                    cursor.execute("SELECT id FROM classes WHERE subject_name = %s AND semester = %s", (subject_name, semester))
-                else:
-                    cursor.execute("SELECT id FROM classes WHERE semester = %s", (semester,))
-
-                target_classes = cursor.fetchall()
-
-                for cls in target_classes:
-                    class_id = cls['id']
-
-                    cursor.execute("DELETE FROM attendance WHERE student_id = %s AND class_id = %s AND date = %s", (student_id, class_id, current_date))
-
-                    cursor.execute("""
-                        INSERT INTO attendance (student_id, class_id, date, time, status, method)
-                        VALUES (%s, %s, %s, NOW(), 'Leave', 'system')
-                    """, (student_id, class_id, current_date))
-
-                current_date += timedelta(days=1)
-
-        db.commit()
-
-        if leave['email']:
-            try:
-                send_leave_status_notification(
-                    leave['email'], leave['name'], action, leave['subject_name'] or 'All Subjects',
-                    leave['start_date'], leave['end_date'], leave.get('application_purpose')
-                )
-            except Exception:
-                pass
-
-        return jsonify({'success': True, 'message': f'Leave {action} and attendance updated!'})
-
-    except Exception as e:
-        if db:
-            db.rollback()
-        print(f"❌ Error: {e}")
-        return jsonify({'success': False, 'error': str(e)})
-    finally:
-        cursor.close()
-        db.close()
 
 
 # ==================================================
@@ -1742,6 +1746,30 @@ def manage_classes():
             day_of_week = request.form['day_of_week']
             start_time = request.form['start_time']
             end_time = request.form['end_time']
+            
+            # Check for overlap (Professor OR Semester)
+            cursor.execute("""
+                SELECT subject_name, professor_id, semester FROM classes 
+                WHERE (professor_id = %s OR semester = %s)
+                AND day_of_week = %s 
+                AND start_time < %s 
+                AND end_time > %s
+            """, (professor_id, semester, day_of_week, end_time, start_time))
+            overlap = cursor.fetchone()
+            
+            if overlap:
+                cursor.execute("""
+                    SELECT c.id, c.subject_name, c.semester, p.name AS professor_name, c.day_of_week, c.start_time, c.end_time
+                    FROM classes c LEFT JOIN professors p ON c.professor_id = p.id
+                    ORDER BY FIELD(c.day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday')
+                """)
+                classes = cursor.fetchall()
+                if str(overlap['professor_id']) == str(professor_id):
+                    error_msg = f"This professor is already scheduled for '{overlap['subject_name']}' at this time."
+                else:
+                    error_msg = f"The {overlap['semester']} is already taking '{overlap['subject_name']}' at this time."
+                return render_template('manage_classes.html', professors=professors, classes=classes, error=error_msg)
+
             cursor.execute(
                 "INSERT INTO classes (subject_name, professor_id, semester, day_of_week, start_time, end_time) VALUES (%s, %s, %s, %s, %s, %s)",
                 (subject_name, professor_id, semester, day_of_week, start_time, end_time)
@@ -1785,6 +1813,28 @@ def edit_class(class_id):
             day = request.form['day_of_week']
             start = request.form['start_time']
             end = request.form['end_time']
+            
+            # Check for overlap (Professor OR Semester)
+            cursor.execute("""
+                SELECT subject_name, professor_id, semester FROM classes 
+                WHERE (professor_id = %s OR semester = %s)
+                AND day_of_week = %s 
+                AND start_time < %s 
+                AND end_time > %s
+                AND id != %s
+            """, (prof_id, semester, day, end, start, class_id))
+            overlap = cursor.fetchone()
+            
+            if overlap:
+                cursor.execute("SELECT * FROM classes WHERE id=%s", (class_id,))
+                class_info = cursor.fetchone()
+                cursor.execute("SELECT id, name FROM professors WHERE status='approved'")
+                professors = cursor.fetchall()
+                if str(overlap['professor_id']) == str(prof_id):
+                    error_msg = f"This professor is already scheduled for '{overlap['subject_name']}' at this time."
+                else:
+                    error_msg = f"The {overlap['semester']} is already taking '{overlap['subject_name']}' at this time."
+                return render_template('edit_class.html', class_info=class_info, professors=professors, error=error_msg)
 
             cursor.execute("""
                 UPDATE classes
@@ -1891,6 +1941,9 @@ def attendance_summary_v2():
         return jsonify([])
     cursor = db.cursor(dictionary=True)
 
+    now_local = datetime.utcnow() + timedelta(hours=5)
+    today_date = now_local.strftime("%Y-%m-%d")
+
     base_query = """
         SELECT s.name, s.roll_no, s.semester, c.subject_name,
         COUNT(CASE WHEN a.status='Present' THEN 1 END) as presents,
@@ -1913,11 +1966,14 @@ def attendance_summary_v2():
         params.append(subject)
 
     if period == 'day':
-        base_query += " AND a.date = CURDATE()"
+        base_query += " AND a.date = %s"
+        params.append(today_date)
     elif period == 'week':
-        base_query += " AND YEARWEEK(a.date, 1) = YEARWEEK(CURDATE(), 1)"
+        base_query += " AND YEARWEEK(a.date, 1) = YEARWEEK(%s, 1)"
+        params.append(today_date)
     elif period == 'month':
-        base_query += " AND MONTH(a.date) = MONTH(CURDATE()) AND YEAR(a.date) = YEAR(CURDATE())"
+        base_query += " AND MONTH(a.date) = MONTH(%s) AND YEAR(a.date) = YEAR(%s)"
+        params.extend([today_date, today_date])
 
     base_query += " GROUP BY s.id, c.subject_name ORDER BY s.semester, s.roll_no"
 
@@ -2207,7 +2263,7 @@ def manual_attendance():
         if db:
             db.close()
 
-    today = datetime.now().strftime('%Y-%m-%d')
+    today = get_pkt_now().strftime('%Y-%m-%d')
     return render_template('manual_attendance.html', classes=classes, today=today)
 
 
@@ -2241,7 +2297,7 @@ def professor_manual_attendance():
         formatted_class['end_time'] = str(formatted_class['end_time'])
         formatted_classes.append(formatted_class)
 
-    today = datetime.now().strftime('%Y-%m-%d')
+    today = get_pkt_now().strftime('%Y-%m-%d')
     return render_template('professor_manual_attendance.html', classes=formatted_classes, today=today)
 
 
@@ -2269,7 +2325,7 @@ def get_class_students(class_id):
         cursor.execute("SELECT id, name, roll_no FROM students WHERE semester=%s AND status='approved' ORDER BY name", (semester,))
         students = cursor.fetchall()
 
-        date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+        date = request.args.get('date', get_pkt_now().strftime('%Y-%m-%d'))
         cursor.execute("SELECT student_id, status FROM attendance WHERE class_id=%s AND date=%s", (class_id, date))
         attendance = {row['student_id']: row['status'] for row in cursor.fetchall()}
 
@@ -2376,7 +2432,7 @@ def bulk_attendance_action():
 
         cursor.execute("SELECT subject_name FROM classes WHERE id = %s", (class_id,))
         subject_name = cursor.fetchone()['subject_name']
-        current_time = datetime.now().strftime('%H:%M:%S')
+        current_time = get_pkt_now().strftime('%H:%M:%S')
 
         for student_id in student_ids:
             cursor.execute("SELECT id FROM attendance WHERE student_id = %s AND class_id = %s AND date = %s", (student_id, class_id, date))

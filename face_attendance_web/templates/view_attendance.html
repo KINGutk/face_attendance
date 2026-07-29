@@ -127,6 +127,7 @@
           <th id="th_3">Thu</th>
           <th id="th_4">Fri</th>
           <th id="th_5">Sat</th>
+          <th id="th_6">Sun</th>
           <th style="width:100px;">Overall %</th>
         </tr>
       </thead>
@@ -142,7 +143,9 @@
       const select = document.getElementById('weekSelect');
       select.innerHTML = '';
       
-      let curr = new Date();
+      let localNow = new Date();
+      let utcNow = localNow.getTime() + (localNow.getTimezoneOffset() * 60000);
+      let curr = new Date(utcNow + (3600000 * 5)); // PKT (UTC+5)
       // Adjust to Monday
       const day = curr.getDay();
       const diff = curr.getDate() - day + (day == 0 ? -6 : 1);
@@ -155,14 +158,16 @@
         let end = new Date(start);
         end.setDate(end.getDate() + 6); // End on Sunday
         
-        // Format dates nicely (e.g., "Oct 23")
         let startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         let endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         
         let label = i === 0 ? "Current Week" : `Week ${i} Ago`;
         
         let option = document.createElement('option');
-        option.value = start.toISOString().split('T')[0]; // Send YYYY-MM-DD to backend
+        let year = start.getFullYear();
+        let month = String(start.getMonth() + 1).padStart(2, '0');
+        let day = String(start.getDate()).padStart(2, '0');
+        option.value = `${year}-${month}-${day}`; // Send YYYY-MM-DD to backend
         option.text = `${label} (${startStr} - ${endStr})`;
         select.appendChild(option);
       }
@@ -193,17 +198,21 @@
         }
 
         // Base date for calculating circle logic
-        let baseDate = new Date(startVal);
+        let [y, m, d] = startVal.split('-');
+        let baseDate = new Date(y, m-1, d); // Local time parser
 
         data.forEach(student => {
           let daysHtml = '';
-          const days = ['M','T','W','T','F','S'];
+          const days = ['M','T','W','T','F','S', 'S'];
           
-          // Generate 6 circles
-          for(let i=0; i<6; i++) {
+          // Generate 7 circles
+          for(let i=0; i<7; i++) {
             let loopDate = new Date(baseDate);
             loopDate.setDate(loopDate.getDate() + i);
-            let dateStr = loopDate.toISOString().split('T')[0];
+            let year = loopDate.getFullYear();
+            let month = String(loopDate.getMonth() + 1).padStart(2, '0');
+            let day = String(loopDate.getDate()).padStart(2, '0');
+            let dateStr = `${year}-${month}-${day}`;
             
             let record = student.week_data[dateStr];
             let status = record ? record.status : 'None';
@@ -242,17 +251,19 @@
       }
     }
 
-    // 3. Helper to Update Table Headers (Mon 23 Oct)
+    // 3. Helper to Update Table Headers
     function updateHeaders(startDateStr) {
-      let current = new Date(startDateStr);
-      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      let [y, m, d] = startDateStr.split('-');
+      let current = new Date(y, m-1, d);
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       
-      for(let i=0; i<6; i++) {
+      for(let i=0; i<7; i++) {
         // Format: "Oct 23"
         let datePretty = current.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         
         // Update the TH text: "Mon <br> <small>Oct 23</small>"
-        document.getElementById(`th_${i}`).innerHTML = `${days[i]} <small>${datePretty}</small>`;
+        let thElem = document.getElementById(`th_${i}`);
+        if(thElem) thElem.innerHTML = `${days[i]} <small>${datePretty}</small>`;
         
         // Next day
         current.setDate(current.getDate() + 1);

@@ -111,7 +111,7 @@
     <div class="card">
       {% if next_class %}
         <div style="font-size: 1.2em; font-weight:bold; color:#fff; margin-bottom:5px;">
-          {{ next_class.subject_name }}
+          {{ next_class.subject_name }} ({{ next_class.semester }})
         </div>
         <div style="color:#00ff88; font-size:0.9em;">
           ⏰ {% if next_class.display_time %}{{ next_class.display_time }}{% else %}{{ next_class.start_time }}{% endif %}
@@ -123,6 +123,25 @@
       {% endif %}
     </div>
 
+  </div>
+
+  <!-- Today's Schedule -->
+  <div style="max-width: 1000px; margin: 0 auto 30px; text-align: left; background: rgba(255,255,255,0.05); border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); padding: 25px;">
+    <h3 style="margin-top: 0; color: #00ff88;">📅 Today's Schedule</h3>
+    {% if classes %}
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+      {% for c in classes %}
+        <div style="background: rgba(0,0,0,0.5); padding: 15px 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #00ff88;">
+          <div>
+            <div style="font-size: 1.1em; font-weight: bold;">{{ c.subject_name }} <span style="color: #888; font-size: 0.85em; font-weight: normal;">- {{ c.semester }}</span></div>
+            <div style="color: #00ff88; font-size: 0.9em; margin-top: 5px;">⏰ {{ c.start_time }} to {{ c.end_time }}</div>
+          </div>
+        </div>
+      {% endfor %}
+      </div>
+    {% else %}
+      <p style="color: #888; font-style: italic;">No classes scheduled for today.</p>
+    {% endif %}
   </div>
 
   <div class="actions">

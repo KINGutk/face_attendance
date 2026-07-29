@@ -172,6 +172,25 @@
   <div class="error-msg">⚠️ {{ error }}</div>
   {% endif %}
 
+  {% if message %}
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      Swal.fire({
+        title: "🎉 Registered Successfully!",
+        text: "Your account is pending Admin Approval.",
+        icon: "success",
+        confirmButtonColor: "#00ff88",
+        background: "#080c0f",
+        color: "#fff",
+        iconColor: "#00ff88"
+      }).then((result) => {
+          window.location.href = "{{ url_for('student_login') }}";
+      });
+    });
+  </script>
+  {% endif %}
+
   <form method="POST" action="{{ url_for('student_signup') }}" id="signupForm">
 
     <div class="card">
