@@ -15,4 +15,4 @@ jobs:
       - name: Push to HF
         env:
           HF_TOKEN: ${{ secrets.KF_TOKEN }}
-        run: git push --force https://afghan50002:$HF_TOKEN@huggingface.co/spaces/afghan50002/face-attendance deploy-hf:main
+        run: git push --force https://afghan50002:$HF_TOKEN@huggingface.co/spaces/afghan50002/live_attendance deploy-hf:main
