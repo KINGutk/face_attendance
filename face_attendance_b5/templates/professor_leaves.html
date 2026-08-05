@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block page_title %}Manage Leaves{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="fw-bold text-primary mb-0">📨 Manage Leaves</h2>
+</div>
+
+<div class="row g-4">
+  {% if leave_records %}
+    {% for leave in leave_records %}
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 rounded-4 h-100">
+        <div class="card-header bg-transparent border-bottom pt-4 pb-3 d-flex justify-content-between align-items-start">
+          <div>
+            <h5 class="fw-bold mb-1">{{ leave.name }}</h5>
+            <span class="text-muted small">{{ leave.roll_no }}</span>
+          </div>
+          <div class="text-end">
+            <span class="badge bg-dark rounded-pill mb-1 d-inline-block">{{ leave.semester }}</span><br>
+            {% if leave.subject_name %}
+              <span class="badge bg-info text-dark rounded-pill">{{ leave.subject_name }}</span>
+            {% else %}
+              <span class="badge bg-primary rounded-pill">All Subjects</span>
+            {% endif %}
+          </div>
+        </div>
+        
+        <div class="card-body">
+          <div class="mb-3">
+            <span class="badge bg-light text-dark border px-3 py-2 rounded-pill shadow-sm">📅 {{ leave.start_date }} ➝ {{ leave.end_date }}</span>
+          </div>
+          <p class="mb-0"><strong>📝 Reason:</strong> {{ leave.application_purpose }}</p>
+        </div>
+        
+        <div class="card-footer bg-transparent border-top-0 pb-4 pt-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <button class="btn btn-outline-secondary rounded-pill btn-sm fw-bold px-3" 
+                  onclick="openModal(`{{ leave.application_purpose }}`, `{{ leave.application_text }}`)">
+              📄 View Letter
+          </button>
+
+          <form method="POST" class="d-flex gap-2 mb-0">
+              <input type="hidden" name="leave_id" value="{{ leave.id }}">
+              <button type="submit" name="action" value="Approved" class="btn btn-success rounded-pill btn-sm fw-bold px-3">✔ Approve</button>
+              <button type="submit" name="action" value="Rejected" class="btn btn-danger rounded-pill btn-sm fw-bold px-3">✖ Reject</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="col-12">
+      <div class="card shadow-sm border-0 rounded-4">
+        <div class="card-body text-center p-5">
+          <h4 class="text-muted mb-0 fst-italic">✨ No pending leave applications for your classes.</h4>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="applicationModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold text-primary">📝 Application Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-1">Subject:</p>
+        <h6 id="modalPurpose" class="fw-bold mb-3"></h6>
+        <div id="modalText" class="p-3 bg-light rounded-3 border-start border-4 border-primary"></div>
+      </div>
+      <div class="modal-footer border-top-0 pt-0">
+        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function openModal(purpose, text) {
+      document.getElementById('modalPurpose').textContent = purpose;
+      document.getElementById('modalText').textContent = text;
+      var myModal = new bootstrap.Modal(document.getElementById('applicationModal'));
+      myModal.show();
+  }
+</script>
+{% endblock %}

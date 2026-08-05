@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block page_title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="card shadow-sm border-0 rounded-4 h-100">
+      <div class="card-body text-center d-flex flex-column justify-content-center">
+        <h2 id="studentCount" class="text-primary mb-2 display-5 fw-bold">--</h2>
+        <p class="text-muted mb-0 text-uppercase fw-semibold" style="letter-spacing: 1px;">Total Students</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card shadow-sm border-0 rounded-4 h-100">
+      <div class="card-body text-center d-flex flex-column justify-content-center">
+        <h2 id="pendingSignups" class="text-warning mb-2 display-5 fw-bold">--</h2>
+        <p class="text-muted mb-0 text-uppercase fw-semibold" style="letter-spacing: 1px;">Pending Signups</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4">
+    <div class="card shadow-sm border-0 rounded-4 h-100">
+      <div class="card-body">
+         <div class="d-flex justify-content-between align-items-center mb-2">
+           <h6 class="text-muted text-uppercase mb-0 fw-semibold" style="letter-spacing: 1px;">7-Day Trend</h6>
+           <span id="trendAvg" class="fw-bold text-success fs-5">--%</span>
+         </div>
+         <div class="chart-wrapper" id="chartWrapper" style="height: 100px; position: relative;">
+            <svg id="trendChart" viewBox="0 0 400 120" preserveAspectRatio="none" style="width:100%; height:100%;">
+              <defs>
+                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#198754" stop-opacity="0.25"/>
+                  <stop offset="100%" stop-color="#198754" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <line x1="0" y1="30" x2="400" y2="30" stroke="#e9ecef" stroke-width="0.5"/>
+              <line x1="0" y1="60" x2="400" y2="60" stroke="#e9ecef" stroke-width="0.5"/>
+              <line x1="0" y1="90" x2="400" y2="90" stroke="#e9ecef" stroke-width="0.5"/>
+              <polygon id="chartFill" fill="url(#chartGrad)" points=""/>
+              <polyline id="chartLine" fill="none" stroke="#198754" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points=""/>
+            </svg>
+            <div class="chart-tooltip bg-dark text-white p-2 rounded shadow-sm" id="chartTooltip" style="position:absolute; opacity:0; pointer-events:none; font-size:0.75rem; z-index: 10;"></div>
+         </div>
+         <div class="d-flex justify-content-between px-2 mt-2" id="chartLabels" style="font-size:0.75rem; color:#6c757d; font-weight:600;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-2">
+  <div class="col-md-12">
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body p-4">
+        <h5 class="card-title mb-4 fw-bold">Quick Actions</h5>
+        <div class="d-flex flex-wrap gap-3">
+          <a href="{{ url_for('manage_students') }}" class="btn btn-outline-primary rounded-pill py-2 px-4 shadow-sm fw-bold">👨‍🎓 Manage Students</a>
+          <a href="{{ url_for('manage_professors') }}" class="btn btn-outline-primary rounded-pill py-2 px-4 shadow-sm fw-bold">👨‍🏫 Manage Professors</a>
+          <a href="{{ url_for('manage_classes') }}" class="btn btn-outline-primary rounded-pill py-2 px-4 shadow-sm fw-bold">📚 Manage Classes</a>
+          <a href="{{ url_for('view_attendance') }}" class="btn btn-outline-primary rounded-pill py-2 px-4 shadow-sm fw-bold">📋 View Attendance</a>
+          <a href="{{ url_for('view_requests') }}" class="btn btn-outline-warning rounded-pill py-2 px-4 shadow-sm fw-bold">🔔 View Signups</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function renderChart(trend) {
+      const svg = document.getElementById('trendChart');
+      const labelsDiv = document.getElementById('chartLabels');
+      const tooltip = document.getElementById('chartTooltip');
+      const wrapper = document.getElementById('chartWrapper');
+
+      if (!trend || trend.length === 0) {
+        labelsDiv.innerHTML = '<span class="text-muted">No data available</span>';
+        return;
+      }
+
+      const padding = 30;
+      const w = 400 - padding * 2;
+      const h = 110;
+      const topPad = 8;
+
+      let points = [];
+      trend.forEach((d, i) => {
+        const x = padding + (i / (trend.length - 1)) * w;
+        const y = topPad + (h - topPad) - (d.percent / 100) * (h - topPad);
+        points.push({ x, y, data: d });
+      });
+
+      const pointStr = points.map(p => `${p.x},${p.y}`).join(' ');
+      document.getElementById('chartLine').setAttribute('points', pointStr);
+
+      const firstX = points[0].x;
+      const lastX = points[points.length - 1].x;
+      const fillStr = `${firstX},${h} ${pointStr} ${lastX},${h}`;
+      document.getElementById('chartFill').setAttribute('points', fillStr);
+
+      svg.querySelectorAll('.chart-dot').forEach(el => el.remove());
+
+      points.forEach((p, i) => {
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', p.x);
+        circle.setAttribute('cy', p.y);
+        circle.setAttribute('r', i === points.length - 1 ? 5 : 4);
+        circle.setAttribute('fill', p.data.percent > 0 ? '#198754' : '#333');
+        circle.setAttribute('stroke', '#fff');
+        circle.setAttribute('stroke-width', '2');
+        circle.setAttribute('class', 'chart-dot');
+        circle.style.cursor = 'pointer';
+
+        circle.addEventListener('mouseenter', (e) => {
+          const svgRect = svg.getBoundingClientRect();
+          const scaleX = svgRect.width / 400;
+          const scaleY = svgRect.height / 120;
+          tooltip.innerHTML = `<strong>${p.data.percent}%</strong> &middot; ${p.data.present}/${p.data.total} present`;
+          tooltip.style.opacity = 1;
+          tooltip.style.left = (p.x * scaleX - 40) + 'px';
+          tooltip.style.top = (p.y * scaleY - 38) + 'px';
+        });
+        circle.addEventListener('mouseleave', () => {
+          tooltip.style.opacity = 0;
+        });
+
+        svg.appendChild(circle);
+      });
+
+      labelsDiv.innerHTML = '';
+      trend.forEach((d, i) => {
+        const span = document.createElement('span');
+        span.textContent = d.label;
+        if (i === trend.length - 1) span.classList.add('fw-bold', 'text-success');
+        span.style.width = '14.28%';
+        span.style.textAlign = 'center';
+        labelsDiv.appendChild(span);
+      });
+
+      const avg = trend.reduce((s, d) => s + d.percent, 0) / trend.length;
+      document.getElementById('trendAvg').textContent = Math.round(avg) + '% avg';
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch("/dashboard_stats");
+        if (!res.ok) return;
+        const data = await res.json();
+
+        document.getElementById("studentCount").textContent = data.students;
+        document.getElementById("pendingSignups").textContent = data.pending_signups;
+        renderChart(data.weekly_trend);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    loadStats();
+    setInterval(loadStats, 30000);
+</script>
+{% endblock %}

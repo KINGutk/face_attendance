@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Success{% endblock %}
+
+{% block content %}
+<div class="checkmark">
+    <svg viewBox="0 0 52 52">
+      <path d="M14 27 L22 35 L38 18" />
+    </svg>
+  </div>
+
+  <h1>✅ Student Added Successfully!</h1>
+  <p>Your student has been registered and photo saved successfully.</p>
+
+  <div class="btn-container">
+    <a href="{{ url_for('add_student') }}">➕ Add Another</a>
+    <a href="{{ url_for('view_attendance') }}">📋 View Attendance</a>
+  </div>
+{% endblock %}

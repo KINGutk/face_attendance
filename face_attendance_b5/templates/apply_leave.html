@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block page_title %}Apply for Leave{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body p-5">
+        <h3 class="fw-bold text-center text-primary mb-4">📝 Student Leave Application</h3>
+        
+        {% if message %}
+        <div class="alert {% if 'Error' in message or '❌' in message %}alert-danger{% else %}alert-success{% endif %} rounded-3 fw-bold text-center" role="alert">
+          {{ message }}
+        </div>
+        {% endif %}
+        
+        <form method="POST">
+          <div class="form-floating mb-3">
+            <select name="subject_name" class="form-select" id="subjectSelect">
+              <option value="">-- Apply for All Subjects --</option>
+              {% for c in classes %}
+                <option value="{{ c.subject_name }}">{{ c.subject_name }}</option>
+              {% endfor %}
+            </select>
+            <label for="subjectSelect">Subject (Optional)</label>
+          </div>
+
+          <div class="form-floating mb-3">
+            <select name="application_purpose" class="form-select" id="purposeSelect" required>
+              <option value="Sick">Sick Leave</option>
+              <option value="Urgent Work">Urgent Work</option>
+              <option value="Family">Family Event</option>
+              <option value="Other">Other</option>
+            </select>
+            <label for="purposeSelect">Reason Category</label>
+          </div>
+
+          <div class="form-floating mb-3">
+            <textarea name="application_text" class="form-control" id="reasonText" placeholder="Explain your reason..." style="height: 100px" required></textarea>
+            <label for="reasonText">Detailed Reason</label>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col-sm-6">
+              <div class="form-floating">
+                <input type="date" name="start_date" class="form-control" id="startDate" required>
+                <label for="startDate">From Date</label>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="form-floating">
+                <input type="date" name="end_date" class="form-control" id="endDate" required>
+                <label for="endDate">To Date</label>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary rounded-pill w-100 py-3 fw-bold shadow-sm fs-5">🚀 Submit Application</button>
+        </form>
+
+        <div class="text-center mt-4">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

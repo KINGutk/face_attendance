@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block page_title %}Edit Professor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body p-5">
+        <h3 class="fw-bold text-center text-primary mb-4">✏️ Update Details</h3>
+        
+        <form method="POST">
+          <div class="form-floating mb-3">
+            <input type="text" name="name" class="form-control" id="profName" value="{{ professor.name }}" required>
+            <label for="profName">Full Name</label>
+          </div>
+          
+          <div class="form-floating mb-4">
+            <input type="email" name="email" class="form-control" id="profEmail" value="{{ professor.email }}" required>
+            <label for="profEmail">Email Address</label>
+          </div>
+          
+          <button type="submit" class="btn btn-primary rounded-pill w-100 py-3 fw-bold shadow-sm mb-3">💾 Save Changes</button>
+          <div class="text-center">
+            <a href="{{ url_for('manage_professors') }}" class="text-decoration-none text-muted">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Smart Face Attendance{% endblock %}</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Custom Dashboard CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    
+    <!-- Theme Script (Runs immediately to prevent FOUC) -->
+    <script>
+        const storedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-bs-theme', storedTheme);
+    </script>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-light">
+
+    <div class="d-flex" id="wrapper">
+        
+        <!-- Sidebar -->
+        <div class="sidebar-wrapper bg-dark text-white shadow" id="sidebar-wrapper">
+            <div class="sidebar-heading text-center py-4 fs-4 fw-bold border-bottom border-secondary">
+                <i class="fa-solid fa-face-viewfinder me-2 text-primary"></i> <span class="d-none d-md-inline">FaceAuth</span>
+            </div>
+            <div class="list-group list-group-flush my-3">
+                {% if session.get('role') == 'admin' %}
+                    <a href="{{ url_for('index') }}" class="list-group-item list-group-item-action bg-transparent text-white fw-bold"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
+                    <a href="{{ url_for('manage_professors') }}" class="list-group-item list-group-item-action bg-transparent text-white fw-bold"><i class="fas fa-chalkboard-teacher me-2"></i> Professors</a>
+                    <a href="{{ url_for('manage_classes') }}" class="list-group-item list-group-item-action bg-transparent text-white fw-bold"><i class="fas fa-book me-2"></i> Classes</a>
+                    <a href="{{ url_for('manage_students') }}" class="list-group-item list-group-item-action bg-transparent text-white fw-bold"><i class="fas fa-user-graduate me-2"></i> Students</a>
+                    <a href="{{ url_for('view_attendance') }}" class="list-group-item list-group-item-action bg-transparent text-white fw-bold"><i class="fas fa-clipboard-list me-2"></i> All Attendance</a>
+                {% elif session.get('role') == 'professor' %}
+                    <a href="{{ url_for('professor_dashboard') }}" class="list-group-item list-group-item-action bg-transparent text-white fw-bold"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
+                    <a href="{{ url_for('professor_attendance') }}" class="list-group-item list-group-item-action bg-transparent text-white fw-bold"><i class="fas fa-camera me-2"></i> Live Attendance</a>
+                    <a href="{{ url_for('professor_manual_attendance') }}" class="list-group-item list-group-item-action bg-transparent text-white fw-bold"><i class="fas fa-edit me-2"></i> Manual Entry</a>
+                    <a href="{{ url_for('professor_leaves') }}" class="list-group-item list-group-item-action bg-transparent text-white fw-bold"><i class="fas fa-envelope-open-text me-2"></i> Leave Requests</a>
+                {% elif session.get('role') == 'student' %}
+                    <a href="{{ url_for('student_dashboard') }}" class="list-group-item list-group-item-action bg-transparent text-white fw-bold"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
+                    <a href="{{ url_for('apply_leave') }}" class="list-group-item list-group-item-action bg-transparent text-white fw-bold"><i class="fas fa-file-signature me-2"></i> Apply for Leave</a>
+                {% endif %}
+            </div>
+        </div>
+        <!-- /#sidebar-wrapper -->
+
+        <!-- Page Content -->
+        <div id="page-content-wrapper" class="w-100">
+            <!-- Top Navigation -->
+            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom shadow-sm px-4 py-3">
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-light shadow-sm" id="menu-toggle"><i class="fas fa-bars"></i></button>
+                    <h5 class="ms-4 mb-0 fw-bold text-secondary d-none d-md-block">{% block page_title %}Dashboard{% endblock %}</h5>
+                </div>
+
+                <div class="ms-auto d-flex align-items-center">
+                    <!-- Theme Toggle -->
+                    <button class="btn btn-sm btn-outline-secondary rounded-circle me-3" id="theme-toggle" aria-label="Toggle Theme">
+                        <i class="fas fa-moon" id="theme-icon"></i>
+                    </button>
+                    
+                    {% if session.get('role') %}
+                        <div class="dropdown">
+                            <a class="nav-link dropdown-toggle text-body fw-bold d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <img src="https://ui-avatars.com/api/?name={{ session.get('role') }}&background=0D8ABC&color=fff" class="rounded-circle me-2" width="32" height="32" alt="Avatar">
+                                {{ session.get('role') | capitalize }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2">
+                                <li><a class="dropdown-item text-danger fw-bold" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <a href="{{ url_for('login') }}" class="btn btn-primary rounded-pill px-4 fw-bold">Login</a>
+                    {% endif %}
+                </div>
+            </nav>
+
+            <!-- Main Content Area -->
+            <div class="container-fluid p-4">
+                
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            {% set alert_class = 'alert-success' if category == 'success' else 'alert-danger' %}
+                            <div class="alert {{ alert_class }} alert-dismissible fade show shadow-sm rounded-3" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Content Block -->
+                {% block content %}{% endblock %}
+
+                <!-- Dynamic Back to Dashboard Button for sub-pages -->
+                {% if request.endpoint not in ['index', 'professor_dashboard', 'student_dashboard', 'login', 'professor_login', 'student_login', 'student_signup', 'professor_signup', 'logout'] and session.get('role') %}
+                <div class="d-flex justify-content-center mt-5 mb-4">
+                    {% if session.get('role') == 'admin' %}
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary rounded-pill px-4 fw-bold shadow-sm">🏠 Back to Dashboard</a>
+                    {% elif session.get('role') == 'professor' %}
+                        <a href="{{ url_for('professor_dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4 fw-bold shadow-sm">🏠 Back to Dashboard</a>
+                    {% elif session.get('role') == 'student' %}
+                        <a href="{{ url_for('student_dashboard') }}" class="btn btn-outline-secondary rounded-pill px-4 fw-bold shadow-sm">🏠 Back to Dashboard</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+            </div>
+        </div>
+        <!-- /#page-content-wrapper -->
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Sidebar Toggle Script -->
+    <script>
+        document.getElementById("menu-toggle").addEventListener("click", function(e) {
+            e.preventDefault();
+            document.getElementById("wrapper").classList.toggle("toggled");
+        });
+
+        // Theme Toggle Script
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            localStorage.setItem('theme', theme);
+            if (theme === 'dark') {
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+            } else {
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+            }
+        }
+
+        // Initialize icon based on current theme
+        const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+        setTheme(currentTheme);
+
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

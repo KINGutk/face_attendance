@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block page_title %}Manual Attendance{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+  <h2 class="fw-bold text-primary mb-0">📝 Manual Attendance</h2>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+  <div class="card-body p-4">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-5">
+        <div class="form-floating">
+          <select id="subjectSelect" class="form-select" onchange="loadStudents()">
+            <option value="" disabled selected>Select Class / Subject</option>
+            {% for c in classes %}
+              <option value="{{ c.id }}">{{ c.subject_name }} ({{ c.day_of_week }} - {{ c.semester }})</option>
+            {% endfor %}
+          </select>
+          <label for="subjectSelect">Select Class</label>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-floating">
+          <input type="date" id="attendanceDate" class="form-control" value="{{ today }}" onchange="loadStudents()">
+          <label for="attendanceDate">Date</label>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <button class="btn btn-primary rounded-pill px-4 py-3 fw-bold shadow-sm w-100" onclick="saveAttendance()">💾 Save Attendance</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-striped align-middle mb-0 text-center" id="studentsTable">
+        <thead class="table-light">
+          <tr>
+            <th class="text-start px-4">Roll No</th>
+            <th class="text-start">Student Name</th>
+            <th>Present</th>
+            <th>Absent</th>
+            <th>Leave</th>
+          </tr>
+        </thead>
+        <tbody id="studentsBody">
+          <tr><td colspan="5" class="text-muted p-5 fst-italic">Please select a class.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let attendanceRecords = {};
+
+  async function loadStudents() {
+    const classId = document.getElementById('subjectSelect').value;
+    const date = document.getElementById('attendanceDate').value;
+    if (!classId) return;
+
+    const tbody = document.getElementById('studentsBody');
+    tbody.innerHTML = '<tr><td colspan="5" class="p-5 text-muted">🔄 Loading students...</td></tr>';
+
+    try {
+      const response = await fetch(`/get_class_students/${classId}?date=${date}`);
+      const data = await response.json();
+      
+      tbody.innerHTML = '';
+      attendanceRecords = {};
+
+      if (data.students.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-5 text-warning">⚠️ No approved students found in this semester.</td></tr>';
+        return;
+      }
+
+      data.students.forEach(student => {
+        const sid = student.id;
+        const status = data.existing_attendance[sid] || ''; 
+        attendanceRecords[sid] = status;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="text-start px-4 text-muted">${student.roll_no}</td>
+          <td class="text-start fw-bold">${student.name}</td>
+          <td><div class="form-check d-flex justify-content-center"><input type="radio" name="status_${sid}" class="form-check-input border-success" style="transform: scale(1.5);" value="Present" ${status === 'Present' ? 'checked' : ''} onchange="updateStatus(${sid}, 'Present')"></div></td>
+          <td><div class="form-check d-flex justify-content-center"><input type="radio" name="status_${sid}" class="form-check-input border-danger" style="transform: scale(1.5);" value="Absent" ${status === 'Absent' ? 'checked' : ''} onchange="updateStatus(${sid}, 'Absent')"></div></td>
+          <td><div class="form-check d-flex justify-content-center"><input type="radio" name="status_${sid}" class="form-check-input border-warning" style="transform: scale(1.5);" value="Leave" ${status === 'Leave' ? 'checked' : ''} onchange="updateStatus(${sid}, 'Leave')"></div></td>
+        `;
+        tbody.appendChild(row);
+      });
+
+    } catch (err) {
+      console.error(err);
+      tbody.innerHTML = '<tr><td colspan="5" class="p-5 text-danger">❌ Error loading data.</td></tr>';
+    }
+  }
+
+  function updateStatus(studentId, status) {
+    attendanceRecords[studentId] = status;
+  }
+
+  async function saveAttendance() {
+    const classId = document.getElementById('subjectSelect').value;
+    const date = document.getElementById('attendanceDate').value;
+    
+    if (!classId) return alert("Select a class first!");
+
+    try {
+      const response = await fetch('/save_manual_attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ class_id: classId, date: date, attendance: attendanceRecords })
+      });
+      const res = await response.json();
+      if (res.success) alert("✅ Attendance Saved!");
+      else alert("❌ Error: " + res.error);
+    } catch (e) {
+      alert("❌ Network Error");
+    }
+  }
+</script>
+{% endblock %}

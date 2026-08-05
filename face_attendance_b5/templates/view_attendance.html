@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block page_title %}Weekly Attendance Register{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body p-4">
+        
+        <!-- Controls Bar -->
+        <div class="row g-3 mb-4 p-3 bg-light rounded-3 shadow-sm mx-0">
+          <div class="col-12 col-md-4">
+            <div class="form-floating">
+              <select id="semesterSelect" class="form-select" onchange="fetchData()">
+                <option value="1st Semester">1st Semester</option>
+                <option value="2nd Semester">2nd Semester</option>
+                <option value="3rd Semester">3rd Semester</option>
+                <option value="4th Semester">4th Semester</option>
+                <option value="5th Semester">5th Semester</option>
+                <option value="6th Semester">6th Semester</option>
+                <option value="7th Semester">7th Semester</option>
+                <option value="8th Semester">8th Semester</option>
+              </select>
+              <label for="semesterSelect">Semester</label>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <div class="form-floating">
+              <select id="subjectSelect" class="form-select" onchange="fetchData()">
+                <option value="all">-- All Subjects --</option>
+                {% for c in classes %}
+                <option value="{{ c.subject_name }}">{{ c.subject_name }}</option>
+                {% endfor %}
+              </select>
+              <label for="subjectSelect">Subject</label>
+            </div>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <div class="form-floating">
+              <select id="weekSelect" class="form-select" onchange="fetchData()"></select>
+              <label for="weekSelect">Week</label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover align-middle text-center">
+            <thead class="table-light">
+              <tr id="headerRow">
+                <th class="text-start px-3 text-uppercase text-secondary" style="font-size: 0.85rem; min-width: 150px;">Student Name</th>
+                <th id="th_0" class="text-secondary" style="font-size: 0.85rem; min-width: 60px;">Mon</th>
+                <th id="th_1" class="text-secondary" style="font-size: 0.85rem; min-width: 60px;">Tue</th>
+                <th id="th_2" class="text-secondary" style="font-size: 0.85rem; min-width: 60px;">Wed</th>
+                <th id="th_3" class="text-secondary" style="font-size: 0.85rem; min-width: 60px;">Thu</th>
+                <th id="th_4" class="text-secondary" style="font-size: 0.85rem; min-width: 60px;">Fri</th>
+                <th id="th_5" class="text-secondary" style="font-size: 0.85rem; min-width: 60px;">Sat</th>
+                <th id="th_6" class="text-secondary" style="font-size: 0.85rem; min-width: 60px;">Sun</th>
+                <th class="text-uppercase text-secondary" style="font-size: 0.85rem; min-width: 100px;">Overall %</th>
+              </tr>
+            </thead>
+            <tbody id="attendanceGrid"></tbody>
+          </table>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Circles */
+  .day-circle {
+    width: 35px; height: 35px; border-radius: 50%; margin: 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: bold; font-size: 0.8em;
+    background: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6;
+    position: relative; cursor: default; transition: 0.3s;
+  }
+  
+  /* Status Colors */
+  .status-Present { background: rgba(25, 135, 84, 0.15); border-color: #198754; color: #198754; box-shadow: 0 0 8px rgba(25, 135, 84, 0.2); }
+  .status-Absent { background: rgba(220, 53, 69, 0.15); border-color: #dc3545; color: #dc3545; }
+  .status-Leave { background: rgba(255, 193, 7, 0.15); border-color: #ffc107; color: #ffc107; }
+
+  /* Tooltip */
+  .day-circle:hover::after {
+    content: attr(data-tooltip);
+    position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+    background: #212529; color: #fff; padding: 5px 10px; border-radius: 6px;
+    font-size: 0.75em; white-space: nowrap; pointer-events: none; z-index: 100;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5); font-weight: bold;
+  }
+
+  /* Percentage Badge */
+  .pct-badge {
+    font-weight: bold; padding: 6px 12px; border-radius: 20px; font-size: 0.9em; 
+    display: inline-block; min-width: 50px; text-align: center;
+  }
+  .pct-high { color: #198754; background: rgba(25, 135, 84, 0.1); border: 1px solid #198754; }
+  .pct-mid { color: #fd7e14; background: rgba(253, 126, 20, 0.1); border: 1px solid #fd7e14; }
+  .pct-low { color: #dc3545; background: rgba(220, 53, 69, 0.1); border: 1px solid #dc3545; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // 1. Initialize Week Dropdown (Current + 5 Past Weeks)
+  function initWeeks() {
+    const select = document.getElementById('weekSelect');
+    select.innerHTML = '';
+    
+    let localNow = new Date();
+    let utcNow = localNow.getTime() + (localNow.getTimezoneOffset() * 60000);
+    let curr = new Date(utcNow + (3600000 * 5)); // PKT (UTC+5)
+    const day = curr.getDay();
+    const diff = curr.getDate() - day + (day == 0 ? -6 : 1);
+    curr.setDate(diff);
+
+    for (let i = 0; i < 6; i++) {
+      let start = new Date(curr);
+      start.setDate(start.getDate() - (i * 7));
+      
+      let end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      
+      let startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      let endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+      let label = i === 0 ? "Current Week" : `Week ${i} Ago`;
+      
+      let option = document.createElement('option');
+      let year = start.getFullYear();
+      let month = String(start.getMonth() + 1).padStart(2, '0');
+      let dayStr = String(start.getDate()).padStart(2, '0');
+      option.value = `${year}-${month}-${dayStr}`;
+      option.text = `${label} (${startStr} - ${endStr})`;
+      select.appendChild(option);
+    }
+  }
+
+  // 2. Main Fetch Function
+  async function fetchData() {
+    const sem = document.getElementById('semesterSelect').value;
+    const sub = document.getElementById('subjectSelect').value;
+    const startVal = document.getElementById('weekSelect').value;
+    
+    updateHeaders(startVal);
+
+    const tbody = document.getElementById('attendanceGrid');
+    tbody.innerHTML = '<tr><td colspan="9" class="text-muted py-4">🔄 Loading attendance records...</td></tr>';
+
+    try {
+      const url = `/get_weekly_attendance?semester=${encodeURIComponent(sem)}&subject=${encodeURIComponent(sub)}&start_date=${startVal}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      tbody.innerHTML = '';
+      
+      if(data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-muted py-4">No students found in this semester.</td></tr>';
+        return;
+      }
+
+      let [y, m, d] = startVal.split('-');
+      let baseDate = new Date(y, m-1, d);
+
+      data.forEach(student => {
+        let daysHtml = '';
+        const days = ['M','T','W','T','F','S', 'S'];
+        
+        for(let i=0; i<7; i++) {
+          let loopDate = new Date(baseDate);
+          loopDate.setDate(loopDate.getDate() + i);
+          let year = loopDate.getFullYear();
+          let month = String(loopDate.getMonth() + 1).padStart(2, '0');
+          let day = String(loopDate.getDate()).padStart(2, '0');
+          let dateStr = `${year}-${month}-${day}`;
+          
+          let record = student.week_data[dateStr];
+          let status = record ? record.status : 'None';
+          
+          let tooltip = record 
+            ? `${record.status} - ${record.time}` 
+            : 'No Class';
+
+          daysHtml += `<td>
+            <div class="day-circle status-${status}" data-tooltip="${tooltip}">
+              ${days[i]}
+            </div>
+          </td>`;
+        }
+
+        let pct = student.overall_percent;
+        let pctClass = pct >= 75 ? 'pct-high' : (pct >= 50 ? 'pct-mid' : 'pct-low');
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="text-start px-3">
+            <div class="fw-bold text-dark" style="font-size:1.05em;">${student.name}</div>
+            <div class="text-muted small">${student.roll}</div>
+          </td>
+          ${daysHtml}
+          <td><span class="pct-badge ${pctClass}">${pct}%</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+    } catch(e) {
+      console.error(e);
+      tbody.innerHTML = '<tr><td colspan="9" class="text-danger py-4">❌ Error loading data from server</td></tr>';
+    }
+  }
+
+  // 3. Helper to Update Table Headers
+  function updateHeaders(startDateStr) {
+    let [y, m, d] = startDateStr.split('-');
+    let current = new Date(y, m-1, d);
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    
+    for(let i=0; i<7; i++) {
+      let datePretty = current.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      let thElem = document.getElementById(`th_${i}`);
+      if(thElem) thElem.innerHTML = `${days[i]} <br> <small class="text-muted">${datePretty}</small>`;
+      current.setDate(current.getDate() + 1);
+    }
+  }
+
+  initWeeks();
+  fetchData();
+</script>
+{% endblock %}

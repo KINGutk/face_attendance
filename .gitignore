@@ -1,0 +1,66 @@
+# ==================================================
+# 🔒 SECRETS — NEVER PUSH THESE
+# ==================================================
+.env
+
+# ==================================================
+# 🐍 PYTHON
+# ==================================================
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ==================================================
+# 💻 IDE / EDITOR
+# ==================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+.project
+.pydevproject
+.code-workspace
+
+# ==================================================
+# 🖥️ OS FILES
+# ==================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# ==================================================
+# 📦 JUNK / TEMP FILES
+# ==================================================
+# Archives that don't belong in the repo
+*.rar
+*.zip
+
+# Large text dumps
+face_attendance_web/project.txt
+face_attendance_web/highlight_project.txt
+
+# Junk files accidentally placed in templates/
+face_attendance_web/templates/merge_sort.py
+face_attendance_web/templates/new.zip.rar
+face_attendance_web/templates/new.zip.txt
+
+# ==================================================
+# 📝 LOGS
+# ==================================================
+*.log
+face_attendance_web/logs/
+
+# ==================================================
+# 🤖 CODE REVIEW GRAPH
+# ==================================================
+.code-review-graph/

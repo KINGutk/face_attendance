@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block page_title %}Professor Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="card shadow-sm border-0 rounded-4 bg-primary text-white">
+      <div class="card-body p-4">
+        <h2 class="fw-bold mb-1">Welcome, {{ professor.name }}!</h2>
+        <p class="mb-0 opacity-75">📧 {{ professor.email }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-3">
+    <div class="card shadow-sm border-0 rounded-4 h-100">
+      <div class="card-body text-center d-flex flex-column justify-content-center">
+        <h3 class="display-4 fw-bold text-success mb-2">{% if present_count %}{{ present_count }}{% else %}0{% endif %}</h3>
+        <span class="text-uppercase text-muted fw-bold small">✅ Present Today</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm border-0 rounded-4 h-100">
+      <div class="card-body text-center d-flex flex-column justify-content-center">
+        <h3 class="display-4 fw-bold text-warning mb-2">{% if leaves_count %}{{ leaves_count }}{% else %}0{% endif %}</h3>
+        <span class="text-uppercase text-muted fw-bold small">📩 Pending Leaves</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm border-0 rounded-4 h-100">
+      <div class="card-body text-center d-flex flex-column justify-content-center">
+        <h3 class="display-4 fw-bold text-info mb-2">{{ classes|length }}</h3>
+        <span class="text-uppercase text-muted fw-bold small">📚 Classes Today</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card shadow-sm border-0 rounded-4 h-100">
+      <div class="card-body text-center d-flex flex-column justify-content-center">
+        {% if next_class %}
+          <h5 class="fw-bold mb-2">{{ next_class.subject_name }} ({{ next_class.semester }})</h5>
+          <span class="text-success fw-bold mb-2">⏰ {% if next_class.display_time %}{{ next_class.display_time }}{% else %}{{ next_class.start_time }}{% endif %}</span>
+          <span class="text-uppercase text-muted fw-bold small">Next Class</span>
+        {% else %}
+          <h3 class="display-4 text-muted mb-2">💤</h3>
+          <span class="text-uppercase text-muted fw-bold small">No more classes</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body p-4">
+        <h4 class="fw-bold text-primary mb-4">📅 Today's Schedule</h4>
+        {% if classes %}
+          <div class="list-group list-group-flush">
+            {% for c in classes %}
+              <div class="list-group-item d-flex justify-content-between align-items-center py-3 border-start border-4 border-primary rounded mb-2 bg-light">
+                <div>
+                  <h5 class="fw-bold mb-1">{{ c.subject_name }} <span class="text-muted fs-6 fw-normal">- {{ c.semester }}</span></h5>
+                  <span class="text-primary small fw-bold">⏰ {{ c.start_time }} to {{ c.end_time }}</span>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted fst-italic mb-0">No classes scheduled for today.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 text-center">
+    <a href="{{ url_for('live_attendance') }}" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm me-2 mb-2">🎥 Start Live Attendance</a>
+    <a href="{{ url_for('professor_attendance') }}" class="btn btn-outline-primary rounded-pill px-4 py-2 fw-bold shadow-sm me-2 mb-2">📊 View Attendance</a>
+    <a href="{{ url_for('professor_manual_attendance') }}" class="btn btn-outline-primary rounded-pill px-4 py-2 fw-bold shadow-sm me-2 mb-2">📝 Manual Attendance</a>
+    <a href="{{ url_for('professor_leaves') }}" class="btn btn-outline-primary rounded-pill px-4 py-2 fw-bold shadow-sm me-2 mb-2">📨 Manage Leaves</a>
+    <a href="{{ url_for('logout') }}" class="btn btn-danger rounded-pill px-4 py-2 fw-bold shadow-sm mb-2">🚪 Logout</a>
+  </div>
+</div>
+{% endblock %}

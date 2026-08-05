@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block page_title %}Edit Student{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body p-5">
+        <h3 class="fw-bold text-center text-primary mb-4">✏️ Edit Student Profile</h3>
+
+        <form method="POST">
+          <div class="form-floating mb-3">
+            <input type="text" name="name" class="form-control" id="studentName" value="{{ student.name }}" required>
+            <label for="studentName">Full Name</label>
+          </div>
+
+          <div class="form-floating mb-3">
+            <input type="text" name="roll_no" class="form-control" id="studentRoll" value="{{ student.roll_no }}" required>
+            <label for="studentRoll">Roll Number</label>
+          </div>
+
+          <div class="form-floating mb-3">
+            <input type="email" name="email" class="form-control" id="studentEmail" value="{{ student.email }}" required>
+            <label for="studentEmail">Email Address</label>
+          </div>
+
+          <div class="form-floating mb-4">
+            <select name="semester" class="form-select" id="semSelect" required>
+              <option value="1st Semester" {% if student.semester == '1st Semester' %}selected{% endif %}>1st Semester</option>
+              <option value="2nd Semester" {% if student.semester == '2nd Semester' %}selected{% endif %}>2nd Semester</option>
+              <option value="3rd Semester" {% if student.semester == '3rd Semester' %}selected{% endif %}>3rd Semester</option>
+              <option value="4th Semester" {% if student.semester == '4th Semester' %}selected{% endif %}>4th Semester</option>
+              <option value="5th Semester" {% if student.semester == '5th Semester' %}selected{% endif %}>5th Semester</option>
+              <option value="6th Semester" {% if student.semester == '6th Semester' %}selected{% endif %}>6th Semester</option>
+              <option value="7th Semester" {% if student.semester == '7th Semester' %}selected{% endif %}>7th Semester</option>
+              <option value="8th Semester" {% if student.semester == '8th Semester' %}selected{% endif %}>8th Semester</option>
+            </select>
+            <label for="semSelect">Semester</label>
+          </div>
+
+          <button type="submit" class="btn btn-primary rounded-pill w-100 py-3 fw-bold shadow-sm mb-3">💾 Save Changes</button>
+          
+          <div class="text-center">
+            <a href="{{ url_for('manage_students') }}" class="text-decoration-none fw-bold text-secondary">⬅ Back to Student List</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block page_title %}Faculty Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+  <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body p-5 text-center">
+        <h2 class="fw-bold mb-4 text-success">👨‍🏫 Faculty Login</h2>
+        
+        <form method="POST">
+          <div class="form-floating mb-3">
+            <input type="email" class="form-control" name="email" id="email" placeholder="Official Email" required>
+            <label for="email">Official Email</label>
+          </div>
+          <div class="form-floating mb-4">
+            <input type="password" class="form-control" name="password" id="password" placeholder="Password" required>
+            <label for="password">Password</label>
+          </div>
+          
+          <button type="submit" class="btn btn-primary rounded-pill w-100 py-2 fw-bold shadow-sm mb-3">Login</button>
+        </form>
+
+        <a href="{{ url_for('professor_signup') }}" class="d-block mb-4 text-success fw-bold text-decoration-none">Register New Account</a>
+
+        <div class="d-flex justify-content-center gap-3">
+          <a href="{{ url_for('login') }}" class="text-decoration-none text-muted fw-semibold">Admin</a>
+          <span class="text-muted">|</span>
+          <a href="{{ url_for('student_login') }}" class="text-decoration-none text-muted fw-semibold">Student</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

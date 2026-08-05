@@ -1,0 +1,12 @@
+Flask
+mysql-connector-python
+numpy
+opencv-python-headless
+ultralytics
+onnxruntime
+insightface
+Werkzeug
+Flask-Mail
+APScheduler
+python-dotenv
+gunicorn

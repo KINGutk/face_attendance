@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block page_title %}Manage Students{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body p-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+          <div>
+            <h5 class="card-title fw-bold mb-0">👨‍🎓 Students Directory</h5>
+          </div>
+          
+          <div class="d-flex flex-wrap gap-3">
+            <form method="GET" action="{{ url_for('manage_students') }}" class="d-flex align-items-center">
+              <label class="text-muted fw-bold me-2 mb-0" style="white-space: nowrap;">Filter by:</label>
+              <select name="semester" class="form-select form-select-sm shadow-sm rounded-3" style="min-width: 150px;" onchange="this.form.submit()">
+                  <option value="All" {% if selected_semester == 'All' %}selected{% endif %}>-- All Semesters --</option>
+                  <option value="1st Semester" {% if selected_semester == '1st Semester' %}selected{% endif %}>1st Semester</option>
+                  <option value="2nd Semester" {% if selected_semester == '2nd Semester' %}selected{% endif %}>2nd Semester</option>
+                  <option value="3rd Semester" {% if selected_semester == '3rd Semester' %}selected{% endif %}>3rd Semester</option>
+                  <option value="4th Semester" {% if selected_semester == '4th Semester' %}selected{% endif %}>4th Semester</option>
+                  <option value="5th Semester" {% if selected_semester == '5th Semester' %}selected{% endif %}>5th Semester</option>
+                  <option value="6th Semester" {% if selected_semester == '6th Semester' %}selected{% endif %}>6th Semester</option>
+                  <option value="7th Semester" {% if selected_semester == '7th Semester' %}selected{% endif %}>7th Semester</option>
+                  <option value="8th Semester" {% if selected_semester == '8th Semester' %}selected{% endif %}>8th Semester</option>
+              </select>
+            </form>
+            
+            <div class="position-relative">
+              <span class="position-absolute top-50 start-0 translate-middle-y ms-2 text-muted">🔍</span>
+              <input type="text" id="searchInput" class="form-control form-control-sm shadow-sm rounded-3" placeholder="Search Name, Roll No..." style="padding-left: 30px; min-width: 200px;">
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table id="studentTable" class="table table-hover table-striped align-middle">
+            <thead class="table-light">
+              <tr>
+                <th class="text-uppercase text-secondary" style="font-size: 0.85rem;">ID</th>
+                <th class="text-uppercase text-secondary" style="font-size: 0.85rem;">Name</th>
+                <th class="text-uppercase text-secondary" style="font-size: 0.85rem;">Roll No</th>
+                <th class="text-uppercase text-secondary" style="font-size: 0.85rem;">Semester</th>
+                <th class="text-uppercase text-secondary" style="font-size: 0.85rem;">Email</th>
+                <th class="text-uppercase text-secondary text-end" style="font-size: 0.85rem;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for student in students %}
+              <tr>
+                <td class="text-muted">#{{ student.id }}</td>
+                <td class="fw-bold">{{ student.name }}</td>
+                <td><span class="badge bg-secondary rounded-pill">{{ student.roll_no }}</span></td>
+                <td><span class="badge bg-info rounded-pill">{{ student.semester }}</span></td>
+                <td class="text-muted small">{{ student.email }}</td>
+                <td class="text-end">
+                  <a href="{{ url_for('edit_student', student_id=student.id) }}" class="btn btn-sm btn-outline-warning rounded-pill px-3 shadow-sm me-1">✏️ Edit</a>
+                  <a href="{{ url_for('delete_student', student_id=student.id) }}" 
+                     class="btn btn-sm btn-outline-danger rounded-pill px-3 shadow-sm" 
+                     onclick="return confirm('⚠️ Are you sure you want to remove {{ student.name }}? This will delete their face data too.')">
+                     🗑 Delete
+                  </a>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6" class="text-center text-muted py-4">No approved students found in this semester.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.getElementById('searchInput').addEventListener('keyup', function() {
+    const filter = this.value.toLowerCase();
+    const table = document.getElementById("studentTable");
+    const tr = table.getElementsByTagName("tr");
+
+    for (let i = 1; i < tr.length; i++) { // Skip header row
+      const tds = tr[i].getElementsByTagName("td");
+      if (tds.length > 0 && tds.length >= 5) {
+        const name = tds[1].textContent || tds[1].innerText;
+        const roll = tds[2].textContent || tds[2].innerText;
+        const email = tds[4].textContent || tds[4].innerText;
+        
+        if (name.toLowerCase().indexOf(filter) > -1 || 
+            roll.toLowerCase().indexOf(filter) > -1 || 
+            email.toLowerCase().indexOf(filter) > -1) {
+          tr[i].style.display = "";
+        } else {
+          tr[i].style.display = "none";
+        }
+      }       
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block page_title %}Manual Attendance{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+  <div>
+    <h2 class="fw-bold text-primary mb-1">📝 Manual Attendance</h2>
+    <p class="text-muted mb-0">Select a class and date to mark attendance.</p>
+  </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+  <div class="card-body p-4">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-4">
+        <div class="form-floating">
+          <select id="classSelect" class="form-select" onchange="loadStudents()">
+            <option value="" disabled selected>-- Choose Class --</option>
+            {% for cls in classes %}
+              <option value="{{ cls.id }}">{{ cls.subject_name }} ({{ cls.semester }}) - {{ cls.day_of_week }}</option>
+            {% endfor %}
+          </select>
+          <label for="classSelect">Select Class</label>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-floating">
+          <input type="date" id="dateInput" class="form-control" value="{{ today }}" onchange="loadStudents()">
+          <label for="dateInput">Date</label>
+        </div>
+      </div>
+      <div class="col-md-4 text-md-end">
+        <button class="btn btn-primary rounded-pill px-4 py-3 fw-bold shadow-sm w-100 save-btn" onclick="saveAttendance()">💾 Save Records</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="studentContainer" class="row g-4">
+  <div class="col-12 text-center p-5 text-muted fst-italic">Select a class to load students...</div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let attendanceState = {};
+
+  async function loadStudents() {
+    const classId = document.getElementById('classSelect').value;
+    const date = document.getElementById('dateInput').value;
+    const container = document.getElementById('studentContainer');
+    
+    if(!classId) return;
+
+    container.innerHTML = '<div class="col-12 text-center p-5 text-muted">🔄 Loading student list...</div>';
+    attendanceState = {};
+
+    try {
+      const res = await fetch(`/get_class_students/${classId}?date=${date}`);
+      const data = await res.json();
+      
+      container.innerHTML = '';
+
+      if(data.students.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center p-5 text-warning">⚠️ No students found in this semester.</div>';
+        return;
+      }
+
+      data.students.forEach(student => {
+        const savedStatus = data.existing_attendance[student.id] || 'Present';
+        attendanceState[student.id] = savedStatus;
+
+        const pBtnClass = savedStatus === 'Present' ? 'btn-success' : 'btn-outline-success';
+        const aBtnClass = savedStatus === 'Absent' ? 'btn-danger' : 'btn-outline-danger';
+        const lBtnClass = savedStatus === 'Leave' ? 'btn-warning' : 'btn-outline-warning';
+
+        const card = document.createElement('div');
+        card.className = 'col-md-6 col-lg-4';
+        card.innerHTML = `
+          <div class="card shadow-sm border-0 rounded-4 h-100 student-card">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center flex-column flex-sm-row gap-3">
+              <div class="text-center text-sm-start">
+                <h5 class="fw-bold mb-1">${student.name}</h5>
+                <span class="text-muted small">${student.roll_no}</span>
+              </div>
+              <div class="btn-group" role="group">
+                <button type="button" class="btn ${pBtnClass} rounded-start-pill px-3 fw-bold att-btn" onclick="setStatus(${student.id}, 'Present', this)">P</button>
+                <button type="button" class="btn ${aBtnClass} px-3 fw-bold att-btn" onclick="setStatus(${student.id}, 'Absent', this)">A</button>
+                <button type="button" class="btn ${lBtnClass} rounded-end-pill px-3 fw-bold att-btn" onclick="setStatus(${student.id}, 'Leave', this)">L</button>
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+    } catch(err) {
+      console.error(err);
+      container.innerHTML = '<div class="col-12 text-center p-5 text-danger">❌ Error loading data.</div>';
+    }
+  }
+
+  function setStatus(studentId, status, element) {
+    attendanceState[studentId] = status;
+    
+    const group = element.parentElement;
+    const btns = group.querySelectorAll('.att-btn');
+    
+    // Reset all buttons in this group
+    btns[0].className = "btn btn-outline-success rounded-start-pill px-3 fw-bold att-btn";
+    btns[1].className = "btn btn-outline-danger px-3 fw-bold att-btn";
+    btns[2].className = "btn btn-outline-warning rounded-end-pill px-3 fw-bold att-btn";
+
+    // Set active class on clicked
+    if(status === 'Present') element.className = "btn btn-success rounded-start-pill px-3 fw-bold att-btn";
+    if(status === 'Absent') element.className = "btn btn-danger px-3 fw-bold att-btn";
+    if(status === 'Leave') element.className = "btn btn-warning rounded-end-pill px-3 fw-bold att-btn";
+  }
+
+  async function saveAttendance() {
+    const classId = document.getElementById('classSelect').value;
+    const date = document.getElementById('dateInput').value;
+    
+    if(!classId) {
+      alert("Please select a class first!");
+      return;
+    }
+
+    const btn = document.querySelector('.save-btn');
+    const originalText = btn.textContent;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/save_manual_attendance', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ 
+          class_id: classId, 
+          date: date, 
+          attendance: attendanceState 
+        })
+      });
+      
+      const result = await res.json();
+      
+      if(result.success) {
+        alert("✅ Attendance Saved Successfully!");
+      } else {
+        alert("❌ Error: " + result.error);
+      }
+    } catch(e) {
+      console.error(e);
+      alert("❌ Network Error");
+    } finally {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  }
+</script>
+{% endblock %}
