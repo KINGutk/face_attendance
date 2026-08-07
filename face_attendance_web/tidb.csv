@@ -1,0 +1,19 @@
+table_name,id,col1,col2,col3,col4,col5,col6,col7,col8,col9
+admins,1,admin,240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9,,,,,,,
+professors,8,prof yonus saib,ynunuskhattak@gmail.com,scrypt:32768:8:1$sHmu9SsAqm2nuNN3$8da66e8fe060d0a59e9ac9877643529f893ccb3f82e40180f69ead68c0a445d68d698089cb7e28e12bfb714a48f2d427d114c8a890431477b99af083e996cf69,approved,,,,
+professors,9,prof irfan,irfan@gmail.com,scrypt:32768:8:1$7uejoBs1stQ0uRxv$50b37596d515be6daee93b484a0f040c2786501d005d4726fdfe3949f7bb395e7fb0188119f94cc0a2af3dec1806a8a6f40fafdde0f548c2723417fb30540109,approved,,,,
+students,73,Naveed khan,25476,5th Semester,naveedkhan20242@gmail.com,faces/25476_Naveed_khan/profile.jpg,scrypt:32768:8:1$gyVos5CptNZvAKsn$081605ec3a868376ae269219372d09168b5d2522cda25fd5b77125c226e4938ff41b6980b9a482a2af7c3eadaa70b8c47707e1cb919e06e0ec110fc2e0bbd8fc,approved,2026-01-05 14:10:00
+students,74,zaman jan,0987678,2nd Semester,ynunuskhattak@gmail.com,faces/0987678_zaman_jan/front.jpg,scrypt:32768:8:1$d5XkhwRJJlyh9hP3$e85977833e361c6526ae488b4343e8b330b8b2d5b74656c48e5ae04f7a4336a9477cfd4b12478a694c6d1dde40a4f71a7c1d6c88be7d5a060621c644e1df6fc0,approved,2026-01-07 08:47:35
+students,75,prof yonus saib,17201,2nd Semester,profaftab@gmail.com,faces/17201_prof_yonus_saib/front.jpg,scrypt:32768:8:1$d8HoAkYI7TUVJoqk$b43466c266f37a5b8fe1b1c3ddd120c030371ad632643b1a3125ab6c752ababd936e199d4fd5c7d9a690ab3fdb8f48efba73ff8a433d0cf0e1d1866a0bf64541,approved,2026-01-07 09:06:53
+students,76,kaliwal,123432,2nd Semester,kaliwal@gmail.com,faces/123432_kaliwal/front.jpg,scrypt:32768:8:1$khNCSVY31OP75fF7$a16f84296d657aaa260d475b65cb40a4d69270ed0da76b48bfb8471d16234716a66dafdccc79b46b2ea1ac00e7238be7a2d965d0846bc7c60bd6f9fc177b7734,approved,2026-01-07 09:13:29
+students,77,Abdul kabeer,233706,5th Semester,kabeer50005@gmail.com,faces/233706_Abdul_kabeer_/front.jpg,scrypt:32768:8:1$pexyxfmZ6nSNb2aj$d0414aee3f9d3e71242d21ecadea84c0531ee2d4178d1ef24381ba87f163ace71d8855b502d57a2b52301d25d9b9ba895cb3a9c1562543feb454848def00b297,approved,2026-01-07 10:05:24
+students,78,Kami,3737473,7th Semester,alam@gmail.com,faces/3737473_Kami/front.jpg,scrypt:32768:8:1$syaNmYRgzrReTNkr$4c22777660a21025a1f4988fff9cbe437a3c5b7908c79210882cfd05eaf3b1f46b8556b4ec67029f8ccd048646992ffa2d7823c45888f7c10ab91d964d41e096,approved,2026-01-08 06:18:07
+classes,62,statestic,Thursday,08:50:00,09:00:00,8,5th Semester,,,
+classes,63,bio,Thursday,09:04:00,09:40:00,8,5th Semester,,,
+attendance,193,77,2026-01-08,08:51:41,Present,62,face,,,
+attendance,194,73,2026-01-08,09:00:00,Absent,62,auto,,,
+attendance,195,77,2026-01-08,09:04:52,Present,63,face,,,
+attendance,196,73,2026-01-08,09:14:00,Absent,63,auto,,,
+attendance,197,73,2026-02-21,08:50:00,Present,62,manual,,,
+attendance,198,77,2026-02-21,08:50:00,Present,62,manual,,,
+leaves,47,77,2026-02-18,2026-02-19,im sick for today,Pending,2026-02-18 14:11:27,statestic,Sick,
