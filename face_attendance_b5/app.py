@@ -1125,6 +1125,20 @@ def student_dashboard():
 
     cursor.execute("SELECT * FROM leaves WHERE student_id=%s ORDER BY created_at DESC", (session['user_id'],))
     leaves = cursor.fetchall()
+
+    # New query for the donut chart
+    cursor.execute("""
+        SELECT 
+            SUM(CASE WHEN status='Present' THEN 1 ELSE 0 END) as total_present,
+            SUM(CASE WHEN status='Absent' THEN 1 ELSE 0 END) as total_absent,
+            SUM(CASE WHEN status='Leave' THEN 1 ELSE 0 END) as total_leave
+        FROM attendance 
+        WHERE student_id=%s
+    """, (session['user_id'],))
+    overall_stats = cursor.fetchone()
+    if not overall_stats['total_present'] and not overall_stats['total_absent'] and not overall_stats['total_leave']: 
+        overall_stats = {'total_present': 0, 'total_absent': 0, 'total_leave': 0}
+
     cursor.close()
     db.close()
 
@@ -1133,7 +1147,7 @@ def student_dashboard():
         d = r['created_at'].strftime('%A, %B %d, %Y') if r['created_at'] else "Unknown"
         grouped_leaves.setdefault(d, []).append(r)
 
-    return render_template('student_dashboard.html', attendance_data=attendance_data, grouped_leaves=grouped_leaves, student_name=session['name'])
+    return render_template('student_dashboard.html', attendance_data=attendance_data, grouped_leaves=grouped_leaves, student_name=session['name'], overall_stats=overall_stats)
 
 
 @app.route('/student_logout')

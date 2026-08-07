@@ -37,8 +37,11 @@ WORKDIR /app/face_attendance_web
 # Create faces and logs directories
 RUN mkdir -p faces logs
 
-# Hugging Face Spaces uses port 7860
-EXPOSE 7860
+# Environment memory optimizations for 512MB RAM instances
+ENV OMP_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
+ENV MALLOC_ARENA_MAX=2
+ENV WEB_CONCURRENCY=1
 
-# Run with gunicorn on port 7860
-CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--workers", "2", "--timeout", "120", "app:app"]
+# Run with gunicorn on port 7860 with 1 worker to fit within 512MB RAM
+CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--workers", "1", "--timeout", "120", "app:app"]
